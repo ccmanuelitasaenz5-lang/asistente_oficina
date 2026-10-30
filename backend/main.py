@@ -7,7 +7,8 @@ from pathlib import Path
 from typing import Optional, List
 from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
+from io import BytesIO
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -27,15 +28,21 @@ from backend.padron import router as padron_router
 from backend.consultas import router as consultas_router
 from backend.agent import consultar as agent_consultar
 from backend.actas import router as actas_router
+from backend.excel_padron import exportar_padron_excel
 from backend.universal_agent import consulta_universal, buscar_en_carpeta
 from backend.scheduler import iniciar_scheduler
+from backend.instancias import router as instancias_router
+from backend.comisiones import router as comisiones_router
+from backend.censo import router as censo_router
+from backend.rendiciones import router as rendiciones_router
+from backend.gaceta import router as gaceta_router
+from backend.proyectos import router as proyectos_router
+
+from backend.logging_config import setup_logging
 
 # Configuración de Logs
-logging.basicConfig(level=logging.INFO)
+setup_logging()
 logger = logging.getLogger("main")
-logging.getLogger("httpx").setLevel(logging.WARNING)
-logging.getLogger("apscheduler").setLevel(logging.WARNING)
-logging.getLogger("telegram").setLevel(logging.WARNING)
 
 # Instancia global del bot para limpieza
 bot_app = None
@@ -126,6 +133,12 @@ CARTAS_PATH.mkdir(parents=True, exist_ok=True)
 app.include_router(padron_router)
 app.include_router(consultas_router)
 app.include_router(actas_router)
+app.include_router(instancias_router)
+app.include_router(comisiones_router)
+app.include_router(censo_router)
+app.include_router(rendiciones_router)
+app.include_router(gaceta_router)
+app.include_router(proyectos_router)
 
 # Modelos Pydantic
 class ConsultaRAG(BaseModel):
@@ -374,7 +387,30 @@ async def list_letters():
         cursor = await db.execute("SELECT * FROM cartas ORDER BY id DESC")
         rows = await cursor.fetchall()
         return [dict(r) for r in rows]
+# AÑADE DESPUÉS del endpoint /api/letters/list este bloque completo:
 
+@app.get("/api/padron/exportar/excel")
+async def api_exportar_padron_excel():
+    """Genera y descarga el padrón completo en Excel. Una hoja por consejo comunal."""
+    try:
+        xlsx_bytes = await exportar_padron_excel()
+        fecha = datetime.now().strftime("%Y%m%d")
+        nombre_archivo = f"Padron_Voceros_{fecha}.xlsx"
+        return StreamingResponse(
+            BytesIO(xlsx_bytes),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={
+                "Content-Disposition": f'attachment; filename="{nombre_archivo}"',
+                "Content-Length": str(len(xlsx_bytes)),
+            },
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ImportError:
+        raise HTTPException(status_code=500, detail="Instala openpyxl: pip install openpyxl")
+    except Exception as e:
+        logger.error(f"Error exportando padrón Excel: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error generando el Excel")
 # ============================================================
 # Endpoint del Agente Inteligente
 # ============================================================
@@ -402,20 +438,23 @@ async def post_agent_query(data: AgentQuery):
 async def api_consulta_universal(request: Request):
     """
     Agente Universal: busca en TODAS las fuentes simultáneamente.
-    Body: {"query": "...", "formato": "markdown", "incluir_raw": false}
+    Body: {"query": "...", "formato": "markdown", "incluir_raw": false, "thread_id": "..."}
     """
     try:
         body = await request.json()
         query = (body.get("query") or "").strip()
+        thread_id = body.get("thread_id")
         if not query:
             raise HTTPException(status_code=400, detail="Se requiere el campo 'query'")
         if len(query) > 1000:
             raise HTTPException(status_code=400, detail="La consulta es demasiado larga (máx. 1000 chars)")
 
+        from backend.universal_agent import consulta_universal
         resultado = await consulta_universal(
             query=query,
             formato=body.get("formato", "markdown"),
             incluir_raw=body.get("incluir_raw", False),
+            thread_id=thread_id
         )
         return resultado
     except HTTPException:

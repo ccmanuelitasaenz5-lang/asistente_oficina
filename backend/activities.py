@@ -4,7 +4,7 @@ from typing import List, Optional
 from datetime import datetime
 from backend.database import get_db
 
-logging.basicConfig(level=logging.INFO)
+
 logger = logging.getLogger("activities")
 
 async def listar_categorias() -> List[str]:

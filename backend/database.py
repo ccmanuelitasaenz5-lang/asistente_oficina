@@ -3,14 +3,21 @@ import aiosqlite
 import json
 from datetime import datetime
 from backend.config import DATABASE_PATH, CATEGORIAS_ACTIVIDADES
+import logging
+
+logger = logging.getLogger("database")
 
 from contextlib import asynccontextmanager
 
 @asynccontextmanager
 async def _get_db_cm():
     DATABASE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    async with aiosqlite.connect(DATABASE_PATH) as db:
+    # timeout=30s soporta ráfagas concurrentes sin "database is locked"
+    async with aiosqlite.connect(DATABASE_PATH, timeout=30.0) as db:
         db.row_factory = aiosqlite.Row
+        await db.execute("PRAGMA busy_timeout = 30000;")  # 30 s busy timeout
+        await db.execute("PRAGMA journal_mode = WAL;")     # WAL: lecturas no bloquean escrituras
+        await db.execute("PRAGMA foreign_keys = ON;")
         yield db
 
 async def get_db():
@@ -137,6 +144,17 @@ async def init_db():
         );
         """)
 
+        # ── MEMORIA CONVERSACIONAL (CHAT) ──────────────────────────────────────
+        await db.execute("""
+        CREATE TABLE IF NOT EXISTS conversaciones (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            thread_id TEXT NOT NULL,
+            role TEXT NOT NULL, -- 'user' o 'assistant'
+            content TEXT NOT NULL,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        """)
+
         await db.execute("""
         CREATE TABLE IF NOT EXISTS preguntas_consulta (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -239,6 +257,35 @@ async def init_db():
 
             await db.execute("INSERT OR IGNORE INTO schema_version (version) VALUES (1)")
 
+        if current_ver < 2:
+            # v2: tracking de compromisos en tareas
+            for col_sql in [
+                "ALTER TABLE tareas ADD COLUMN responsable TEXT",
+                "ALTER TABLE tareas ADD COLUMN consejo_id INTEGER REFERENCES consejos_comunales(id)",
+                "ALTER TABLE tareas ADD COLUMN estado TEXT DEFAULT 'pendiente'",
+            ]:
+                try:
+                    await db.execute(col_sql)
+                except Exception:
+                    pass
+            
+            try:
+                await db.execute("UPDATE tareas SET estado = 'completada' WHERE completada = 1")
+            except Exception:
+                pass
+
+            await db.execute("INSERT OR IGNORE INTO schema_version (version) VALUES (2)")
+            logger.info("Migración v2: Campos de seguimiento agregados a tareas")
+
+        if current_ver < 3:
+            # v3: Migración hacia Comuna completa (12 tablas nuevas + poblacion_total + semillas)
+            try:
+                from backend.migrations.v3_comuna import aplicar_migracion_v3
+                await aplicar_migracion_v3(db)
+            except Exception as e:
+                logger.error(f"Error ejecutando migración v3: {e}")
+                raise
+
         # Safe column additions for cartas (always run, fail silently if exists)
         for col_sql in [
             "ALTER TABLE cartas ADD COLUMN docx_path TEXT",
@@ -288,3 +335,22 @@ async def obtener_siguiente_numero_oficio(prefijo="CPPO"):
             siguiente = 1
             
         return f"{prefijo}-{siguiente:04d}"
+
+async def guardar_mensaje_chat(thread_id: str, role: str, content: str):
+    """Guarda un mensaje en la memoria conversacional."""
+    async with await get_db() as db:
+        await db.execute(
+            "INSERT INTO conversaciones (thread_id, role, content) VALUES (?, ?, ?)",
+            (thread_id, role, content)
+        )
+        await db.commit()
+
+async def obtener_historial_chat(thread_id: str, limit: int = 10) -> list:
+    """Recupera los últimos mensajes de una conversación."""
+    async with await get_db() as db:
+        cursor = await db.execute(
+            "SELECT role, content FROM conversaciones WHERE thread_id = ? ORDER BY timestamp ASC LIMIT ?",
+            (thread_id, limit)
+        )
+        rows = await cursor.fetchall()
+        return [{"role": row["role"], "content": row["content"]} for row in rows]

@@ -25,7 +25,7 @@ def _limpiar_nombre(nombre: str) -> str:
 def _limpiar_telefono(raw: str) -> str:
     return re.sub(r'[^\d+]', '', raw)
 
-def extraer_datos_acta(pdf_path: str | Path) -> dict:
+async def extraer_datos_acta(pdf_path: str | Path) -> dict:
     import pdfplumber
 
     pdf_path = Path(pdf_path)
@@ -54,7 +54,7 @@ def extraer_datos_acta(pdf_path: str | Path) -> dict:
 
     if not texto_completo.strip():
         logger.warning("No se detectó texto. Intentando OCR con Zhipu (GLM-4V) como respaldo...")
-        return _extraer_datos_con_ocr_zhipu(pdf_path)
+        return await _extraer_datos_con_ocr_zhipu(pdf_path)
 
     # ── Metadatos ──────────────────────────────────────────
     codigo = _extraer_metadato(RE_CODIGO, texto_upper)
@@ -525,7 +525,7 @@ def _parsear_sin_ps(linea: str, nombre_seccion: str) -> dict | None:
         "telefono": telefono, "votos": votos
     }
 
-def _extraer_datos_con_ocr_zhipu(pdf_path: Path) -> dict:
+async def _extraer_datos_con_ocr_zhipu(pdf_path: Path) -> dict:
     import fitz  # PyMuPDF
     import base64
     import httpx
@@ -588,9 +588,9 @@ def _extraer_datos_con_ocr_zhipu(pdf_path: Path) -> dict:
         "temperature": 0.1
     }
     
-    with httpx.Client(timeout=60.0) as client:
+    async with httpx.AsyncClient(timeout=60.0) as client:
         try:
-            response = client.post(url, headers=headers, json=data)
+            response = await client.post(url, headers=headers, json=data)
             if response.status_code == 200:
                 content = response.json()["choices"][0]["message"]["content"]
                 content = content.replace("```json", "").replace("```", "").strip()

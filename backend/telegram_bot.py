@@ -18,7 +18,7 @@ from backend.search import responder_consulta
 from backend.activities import registrar_actividad, listar_categorias
 from backend.calendar_sync import agregar_evento_calendario
 
-logging.basicConfig(level=logging.INFO)
+
 logger = logging.getLogger("telegram_bot")
 
 MEDIA_PATH.mkdir(parents=True, exist_ok=True)
@@ -62,30 +62,55 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(bienvenida, parse_mode="Markdown")
 
-async def buscar_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Realiza una consulta a los documentos o la DB."""
+async def handle_consulta_universal(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Punto de entrada único para Telegram.
+    Procesa tanto el comando /consulta (o /buscar) como el texto libre.
+    Usa el Agente Universal para buscar en DB + Archivos simultáneamente.
+    """
     if not es_chat_autorizado(update.effective_chat.id):
         return
-        
-    query = " ".join(context.args) if context.args else ""
-    if not query:
-        await update.message.reply_text("Por favor escribe qué deseas buscar. Ejemplo: `/buscar actas de asamblea`")
+
+    # Si viene por comando (/consulta algo), extraer argumentos. Si es texto libre, tomar todo.
+    if context.args:
+        query = " ".join(context.args)
+    else:
+        query = update.message.text.strip() if update.message.text else ""
+
+    # Ignorar comandos que no son de búsqueda (o mal formados)
+    if query.startswith("/") and not query.startswith("/consulta") and not query.startswith("/buscar"):
         return
-        
+
+    if not query:
+        await update.message.reply_text("Por favor escribe qué deseas buscar o consultar.")
+        return
+
     await update.message.reply_chat_action("typing")
-    
-    # Usar el agente que consulta la DB
-    from backend.agent import consultar
-    res = await consultar(query)
-    respuesta_completa = res.get("respuesta", "No pude procesar esa consulta.")
-    if res.get("tabla"):
-        respuesta_completa = res["tabla"]
-    
-    # Acortar si es demasiado largo
-    if len(respuesta_completa) > 4000:
-        respuesta_completa = respuesta_completa[:4000] + "\n\n[Respuesta recortada...]"
+
+    from backend.universal_agent import consulta_universal
+    try:
+        # Llamar al Agente Universal
+        resultado = await consulta_universal(query, formato="markdown")
+        respuesta = resultado.get("respuesta", "Lo siento, no pude procesar la consulta.")
         
-    await update.message.reply_text(respuesta_completa, parse_mode="Markdown")
+        # Opcional: mostrar qué fuentes se usaron al final del mensaje
+        fuentes = resultado.get("fuentes_usadas", [])
+        if fuentes:
+            f_str = ", ".join(f.capitalize() for f in fuentes)
+            respuesta += f"\n\n_(Fuentes consultadas: {f_str})_"
+
+        # Acortar si excede límite de Telegram
+        if len(respuesta) > 4000:
+            respuesta = respuesta[:4000] + "\n\n[Respuesta recortada por límite de Telegram...]"
+
+        await update.message.reply_text(respuesta, parse_mode="Markdown")
+    except Exception as e:
+        logger.error(f"Error en handle_consulta_universal: {e}")
+        # Fallback si falla el markdown o la API
+        try:
+            await update.message.reply_text(respuesta)
+        except Exception:
+            await update.message.reply_text("Ocurrió un error al buscar la información. Intenta de nuevo más tarde.")
 
 async def registrar_actividad_inteligente(texto: str, fotos: list = None) -> str:
     """Usa la IA para extraer metadatos de un texto libre y guardar la actividad."""
@@ -288,53 +313,8 @@ async def recibir_mensaje_foto(update: Update, context: ContextTypes.DEFAULT_TYP
         logger.error(f"Error procesando foto recibida: {e}")
         await update.message.reply_text("❌ Ocurrió un error al intentar guardar la foto.")
 
-async def recibir_mensaje_texto(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Mensajes de texto planos que no son comandos se responden usando RAG/Búsqueda."""
-    if not es_chat_autorizado(update.effective_chat.id):
-        return
-        
-    texto = update.message.text
-    if not texto:
-        return
-        
-    await update.message.reply_chat_action("typing")
-    
-    # Palabras clave que indican consulta a la DB (voceros, oficios, actas, consejos)
-    palabras_db = ["vocero", "voceros", "vocería", "voceria", "consejo comunal", "consejo",
-                   "oficio", "oficios", "carta", "cartas", "acta", "actas", "elección",
-                   "eleccion", "comuna", "electo", "elegido", "padrón", "padron",
-                   "cuantos", "cuántos", "registro", "registrados", "ultimo", "último",
-                   "numero de oficio", "número de oficio", "ecosocialismo", "salud",
-                   "juventud", "contraloría", "contraloria", "principal", "suplente",
-                   "cédula", "cedula", "teléfono", "telefono", "votos", "votación"]
-    
-    texto_lower = texto.lower()
-    es_consulta_db = any(p in texto_lower for p in palabras_db)
-    
-    if es_consulta_db:
-        # Usar el agente que consulta la DB
-        from backend.agent import consultar
-        res = await consultar(texto)
-        respuesta_completa = res.get("respuesta", "No pude procesar esa consulta.")
-        if res.get("tabla"):
-            respuesta_completa = res["tabla"]
-    else:
-        # Usar RAG para búsqueda en documentos
-        res = await responder_consulta(texto)
-        fuentes_str = ""
-        if res["fuentes"]:
-            fuentes_str = "\n\n📄 **Fuentes:**\n" + "\n".join([f"• {f}" for f in res["fuentes"]])
-        respuesta_completa = f"{res['respuesta']}{fuentes_str}"
-    
-    # Acortar si es demasiado largo para Telegram (límite 4096 caracteres)
-    if len(respuesta_completa) > 4000:
-        respuesta_completa = respuesta_completa[:4000] + "\n\n[Respuesta recortada...]"
-
-    try:
-        await update.message.reply_text(respuesta_completa, parse_mode="Markdown")
-    except Exception:
-        # Fallback a texto plano si Markdown falla (nombres con _ o caracteres especiales)
-        await update.message.reply_text(respuesta_completa)
+# La función recibir_mensaje_texto original ha sido reemplazada por handle_consulta_universal
+# que maneja tanto los comandos como el texto libre.
 
 async def enviar_notificaciones_periodicas(context: ContextTypes.DEFAULT_TYPE):
     """Envía notificaciones al chat de Telegram sobre tareas próximas a vencer."""
@@ -394,7 +374,8 @@ def inicializar_bot():
         
         # Registrar manejadores de comandos
         app.add_handler(CommandHandler("start", start_command))
-        app.add_handler(CommandHandler("buscar", buscar_command))
+        app.add_handler(CommandHandler("buscar", handle_consulta_universal))
+        app.add_handler(CommandHandler("consulta", handle_consulta_universal))
         app.add_handler(CommandHandler("actividad", actividad_command))
         app.add_handler(CommandHandler("tarea", tarea_command))
         app.add_handler(CommandHandler("tareas", tareas_command))
@@ -402,8 +383,8 @@ def inicializar_bot():
         # Manejador de imágenes
         app.add_handler(MessageHandler(filters.PHOTO, recibir_mensaje_foto))
         
-        # Manejador de texto plano (para RAG y chat directo)
-        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_mensaje_texto))
+        # Manejador de texto plano (para RAG y chat directo usando Agente Universal)
+        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_consulta_universal))
         
         # Programar alertas de tareas cada 15 minutos (900 segundos)
         app.job_queue.run_repeating(enviar_notificaciones_periodicas, interval=900, first=10)

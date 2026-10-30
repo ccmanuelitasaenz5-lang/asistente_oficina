@@ -28,16 +28,38 @@ class RespuestaCreate(BaseModel):
 
 # ── Consultas ─────────────────────────────────────────────────────────────────
 
+@router.get("")
 @router.get("/")
-async def listar_consultas():
+async def listar_consultas(page: int = 1, limit: int = 50, q: Optional[str] = None):
     """Lista todas las consultas populares."""
+    import math
     async with await get_db() as db:
+        offset = (page - 1) * limit
+        params = []
+        where_sql = "1=1"
+        
+        if q:
+            where_sql = "(titulo LIKE ? OR descripcion LIKE ?)"
+            params.extend([f"%{q}%", f"%{q}%"])
+            
+        count_cursor = await db.execute(f"SELECT COUNT(*) FROM consultas_populares WHERE {where_sql}", params)
+        total = (await count_cursor.fetchone())[0]
+        
+        params.extend([limit, offset])
         cursor = await db.execute(
-            "SELECT * FROM consultas_populares ORDER BY fecha_inicio DESC"
+            f"SELECT * FROM consultas_populares WHERE {where_sql} ORDER BY fecha_inicio DESC LIMIT ? OFFSET ?",
+            params
         )
         rows = await cursor.fetchall()
-        return [dict(r) for r in rows]
+        
+        return {
+            "items": [dict(r) for r in rows],
+            "total": total,
+            "page": page,
+            "pages": math.ceil(total / limit) if limit > 0 else 1
+        }
 
+@router.post("")
 @router.post("/")
 async def crear_consulta(data: ConsultaCreate):
     """Crea una nueva consulta popular."""

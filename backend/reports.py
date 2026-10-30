@@ -1,3 +1,4 @@
+import html
 import os
 import logging
 from datetime import datetime, timedelta
@@ -11,7 +12,7 @@ from backend.config import INFORMES_PATH, MEDIA_PATH, COMUNA_INFO
 from backend.database import get_db
 from backend.activities import obtener_actividades
 
-logging.basicConfig(level=logging.INFO)
+
 logger = logging.getLogger("reports")
 
 INFORMES_PATH.mkdir(parents=True, exist_ok=True)
@@ -120,17 +121,22 @@ PLANTILLA_INFORME_HTML = """
             margin-top: 5px;
         }}
         
-        .seccion-grafico {{
-            text-align: center;
+        .galeria-collage {{
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
             margin: 30px 0;
             page-break-inside: avoid;
         }}
         
-        .seccion-grafico img {{
-            max-width: 90%;
-            height: auto;
-            border: 1px solid #e2e8f0;
+        .galeria-collage img {{
+            width: 220px;
+            height: 160px;
+            object-fit: cover;
             border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         }}
         
         .page-break {{
@@ -173,18 +179,6 @@ PLANTILLA_INFORME_HTML = """
             text-align: justify;
             font-size: 10pt;
             color: #2d3748;
-        }}
-        
-        .actividad-fotos {{
-            margin-top: 12px;
-        }}
-        
-        .actividad-fotos img {{
-            max-width: 200px;
-            max-height: 150px;
-            margin-right: 10px;
-            border-radius: 4px;
-            border: 1px solid #cbd5e0;
         }}
         
         .btn-imprimir {{
@@ -238,7 +232,7 @@ PLANTILLA_INFORME_HTML = """
         </div>
     </div>
 
-    {html_grafico}
+    {html_galeria}
 
     <div class="page-break"></div>
 
@@ -312,28 +306,23 @@ async def generar_informe_pdf(periodo: str) -> dict:
     total_part = sum(a["participantes"] for a in actividades)
     promedio_part = total_part / total_act if total_act > 0 else 0.0
     
-    # Generar gráfico estadístico si hay actividades
-    grafico_url = ""
-    html_grafico = ""
-    if total_act > 0:
-        grafico_filename = f"chart_report_{periodo}_{hoy.strftime('%Y%m%d_%H%M%S')}.png"
-        try:
-            grafico_url = generar_grafico_estadisticas(actividades, grafico_filename)
-            if grafico_url:
-                html_grafico = f"""
-                <div class="seccion-grafico">
-                    <img src="{grafico_url}" alt="Estadísticas de Actividades">
-                </div>
-                """
-        except Exception as e:
-            logger.error(f"Error al crear el gráfico estadístico: {e}")
-            
-    # Construir HTML de las actividades
+    todas_las_fotos = []
+    
+    # Construir HTML de las actividades y recolectar fotos
     html_actividades = ""
     if not actividades:
         html_actividades = "<p>No se registraron actividades en este periodo.</p>"
     else:
         for act in actividades:
+            # Recolectar fotos
+            if act["fotos"]:
+                for foto in act["fotos"]:
+                    nombre_foto = Path(foto).name
+                    ruta_real = MEDIA_PATH / nombre_foto
+                    if ruta_real.exists():
+                        # Para xhtml2pdf usamos ruta absoluta local
+                        todas_las_fotos.append(str(ruta_real.resolve()))
+
             # Formatear la fecha
             try:
                 f_obj = datetime.strptime(act["fecha"], "%Y-%m-%d")
@@ -341,30 +330,29 @@ async def generar_informe_pdf(periodo: str) -> dict:
             except Exception:
                 fecha_formato = act["fecha"]
                 
-            # Fotos
-            html_fotos = ""
-            if act["fotos"]:
-                html_fotos = '<div class="actividad-fotos">'
-                for foto in act["fotos"]:
-                    # Usar URL relativa /media/ para que el servidor web pueda servirla
-                    if os.path.exists(foto):
-                        foto_url = f"/media/{Path(foto).name}"
-                        html_fotos += f'<img src="{foto_url}">'
-                html_fotos += '</div>'
-                
+            cat_esc = html.escape(str(act.get('categoria') or ''))
+            desc_esc = html.escape(str(act.get('descripcion') or '')).replace('\n', '<br>')
             html_actividades += f"""
             <div class="actividad-item">
                 <div class="actividad-meta">
                     <strong>Fecha:</strong> {fecha_formato} | 
-                    <span class="badge-cat">{act['categoria']}</span> | 
+                    <span class="badge-cat">{cat_esc}</span> | 
                     <strong>Participantes:</strong> {act['participantes']}
                 </div>
                 <div class="actividad-desc">
-                    {act['descripcion']}
+                    {desc_esc}
                 </div>
-                {html_fotos}
             </div>
             """
+            
+    # Generar galeria (reemplazando el gráfico)
+    html_galeria = ""
+    if todas_las_fotos:
+        html_galeria = '<div class="galeria-collage">'
+        # Limitaremos a unas 8 fotos para que no sature la primera página
+        for foto_url in todas_las_fotos[:8]:
+            html_galeria += f'<img src="{foto_url}" alt="Foto de actividad">'
+        html_galeria += '</div>'
             
     rango_fechas = f"Desde {fecha_inicio} hasta {fecha_fin}"
     fecha_generacion = hoy.strftime("%d/%m/%Y %I:%M %p")
@@ -377,21 +365,34 @@ async def generar_informe_pdf(periodo: str) -> dict:
         total_actividades=total_act,
         total_participantes=total_part,
         promedio_participantes=promedio_part,
-        html_grafico=html_grafico,
+        html_galeria=html_galeria,
         html_actividades=html_actividades
     )
     
-    # Guardar como archivo HTML (se puede imprimir a PDF desde el navegador)
-    nombre_archivo = f"Informe_Gestion_{tipo_str}_{hoy.strftime('%Y%m%d_%H%M%S')}.html"
-    html_filepath = INFORMES_PATH / nombre_archivo
+    # Generar y guardar PDF usando xhtml2pdf
+    nombre_archivo = f"Informe_Gestion_{tipo_str}_{hoy.strftime('%Y%m%d_%H%M%S')}.pdf"
+    pdf_filepath = INFORMES_PATH / nombre_archivo
     
     try:
-        with open(html_filepath, 'w', encoding='utf-8') as f:
-            f.write(html_informe)
-        logger.info(f"Informe HTML generado en: {html_filepath}")
-        pdf_path_str = str(html_filepath.resolve())
+        from xhtml2pdf import pisa
+        with open(pdf_filepath, "w+b") as result_file:
+            pisa_status = pisa.CreatePDF(
+                html_informe,
+                dest=result_file,
+                encoding='utf-8'
+            )
+        
+        if pisa_status.err:
+            logger.error(f"Error interno xhtml2pdf: {pisa_status.err}")
+            pdf_path_str = ""
+        else:
+            logger.info(f"Informe PDF generado en: {pdf_filepath}")
+            pdf_path_str = str(pdf_filepath.resolve())
+    except ImportError:
+        logger.error("xhtml2pdf no instalado.")
+        pdf_path_str = ""
     except Exception as e:
-        logger.error(f"Error al generar el informe HTML: {e}")
+        logger.error(f"Error generando PDF: {e}")
         pdf_path_str = ""
         
     return {

@@ -31,9 +31,11 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 COHERE_API_KEY = os.getenv("COHERE_API_KEY", "")
 HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACE_API_KEY", "")
 ZHIPU_API_KEY = os.getenv("ZHIPU_API_KEY", "")
+NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY", "")
 
 # Cuotas diarias (solicitudes por día, nivel gratuito)
 AI_QUOTAS = {
+    "nvidia": {"limit": 2400, "used": 0},  # 40 RPM × 60 min = 2400/hora (aproximado)
     "zhipu": {"limit": 5000, "used": 0},
     "groq": {"limit": 14400, "used": 0},
     "gemini": {"limit": 1500, "used": 0},
@@ -42,7 +44,7 @@ AI_QUOTAS = {
 }
 
 # Orden de prioridad para la rotación
-AI_PRIORITY = ["zhipu", "groq", "gemini", "cohere", "huggingface"]
+AI_PRIORITY = ["nvidia", "zhipu", "gemini", "cohere", "huggingface"]
 
 # ============================================================
 # Telegram
@@ -70,6 +72,13 @@ SERVER_PORT = int(os.getenv("SERVER_PORT", "8000"))
 # Formato: CPPO-2026-Nro.001, CPPO-2026-Nro.002, etc.
 # ============================================================
 OFICIO_PREFIJO = os.getenv("OFICIO_PREFIJO", "CPPO")
+
+# ============================================================
+# Vocero por defecto para firma de cartas
+# ============================================================
+VOCERO_DEFAULT_NOMBRE = os.getenv("VOCERO_DEFAULT_NOMBRE", "Vocero Principal")
+VOCERO_DEFAULT_CARGO = os.getenv("VOCERO_DEFAULT_CARGO", "Vocero de la Comuna")
+VOCERO_DEFAULT_TELEFONO = os.getenv("VOCERO_DEFAULT_TELEFONO", "0000-0000000")
 
 # ============================================================
 # Categorías de Actividades (con opción de agregar más)

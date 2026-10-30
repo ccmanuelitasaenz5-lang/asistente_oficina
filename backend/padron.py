@@ -26,6 +26,7 @@ class VoceroCreate(BaseModel):
     nombre: str
     cedula: Optional[str] = None
     cargo: str
+    unidad: Optional[str] = None
     telefono: Optional[str] = None
     email: Optional[str] = None
 
@@ -33,10 +34,18 @@ class VoceroCreate(BaseModel):
 
 @router.get("/consejos")
 async def listar_consejos():
-    """Lista todos los consejos comunales activos."""
+    """Lista todos los consejos comunales activos con el conteo de voceros."""
     async with await get_db() as db:
         cursor = await db.execute(
-            "SELECT * FROM consejos_comunales WHERE activo=1 ORDER BY nombre"
+            """
+            SELECT c.*, 
+                   COUNT(v.id) as voceros_count
+            FROM consejos_comunales c
+            LEFT JOIN voceros v ON v.consejo_id = c.id AND v.activo = 1
+            WHERE c.activo = 1
+            GROUP BY c.id
+            ORDER BY c.nombre
+            """
         )
         rows = await cursor.fetchall()
         return [dict(r) for r in rows]
@@ -82,49 +91,79 @@ async def eliminar_consejo(consejo_id: int):
 # ── Voceros ───────────────────────────────────────────────────────────────────
 
 @router.get("/voceros")
-async def listar_voceros(consejo_id: Optional[int] = None, q: Optional[str] = None):
-    """Lista voceros. Si se pasa consejo_id, filtra por consejo. Si se pasa q, busca por nombre."""
+async def listar_voceros(
+    consejo_id: Optional[int] = None, 
+    q: Optional[str] = None,
+    unidad: Optional[str] = None,
+    page: int = 1,
+    limit: int = 50
+):
+    """Lista voceros con paginación."""
+    import math
     async with await get_db() as db:
+        offset = (page - 1) * limit
+        params = []
+        where_clauses = ["v.activo=1"]
+        
         if q:
-            cursor = await db.execute(
-                """SELECT v.*, c.nombre as consejo_nombre 
-                   FROM voceros v LEFT JOIN consejos_comunales c ON v.consejo_id = c.id
-                   WHERE v.activo=1 AND v.nombre LIKE ? ORDER BY v.nombre LIMIT 10""",
-                (f"%{q}%",)
-            )
-        elif consejo_id:
-            cursor = await db.execute(
-                """SELECT v.*, c.nombre as consejo_nombre 
-                   FROM voceros v LEFT JOIN consejos_comunales c ON v.consejo_id = c.id
-                   WHERE v.activo=1 AND v.consejo_id=? ORDER BY v.nombre""",
-                (consejo_id,)
-            )
-        else:
-            cursor = await db.execute(
-                """SELECT v.*, c.nombre as consejo_nombre 
-                   FROM voceros v LEFT JOIN consejos_comunales c ON v.consejo_id = c.id
-                   WHERE v.activo=1 ORDER BY v.nombre"""
-            )
+            where_clauses.append("(v.nombre LIKE ? OR v.cedula LIKE ?)")
+            params.extend([f"%{q}%", f"%{q}%"])
+        if consejo_id:
+            where_clauses.append("v.consejo_id=?")
+            params.append(consejo_id)
+        if unidad and unidad != 'all':
+            u_lower = unidad.lower()
+            if 'ejecutiva' in u_lower:
+                where_clauses.append("(v.cargo LIKE '%Ejecutiv%' OR v.cargo LIKE '%Finanzas%' OR v.cargo LIKE '%Economía%')")
+            elif 'contralor' in u_lower:
+                where_clauses.append("v.cargo LIKE '%Contralor%'")
+            elif 'electoral' in u_lower:
+                where_clauses.append("v.cargo LIKE '%Electoral%'")
+            else:
+                where_clauses.append("v.cargo LIKE ?")
+                params.append(f"%{unidad}%")
+            
+        where_sql = " AND ".join(where_clauses)
+        
+        count_cursor = await db.execute(f"SELECT COUNT(*) FROM voceros v WHERE {where_sql}", params)
+        total = (await count_cursor.fetchone())[0]
+        
+        params.extend([limit, offset])
+        cursor = await db.execute(
+            f"""SELECT v.*, c.nombre as consejo_nombre 
+               FROM voceros v LEFT JOIN consejos_comunales c ON v.consejo_id = c.id
+               WHERE {where_sql} ORDER BY v.nombre LIMIT ? OFFSET ?""",
+            params
+        )
         rows = await cursor.fetchall()
-        return [dict(r) for r in rows]
+        
+        return {
+            "items": [dict(r) for r in rows],
+            "total": total,
+            "page": page,
+            "pages": math.ceil(total / limit) if limit > 0 else 1
+        }
 
 @router.post("/voceros")
 async def crear_vocero(data: VoceroCreate):
     """Registra un nuevo vocero en el padrón."""
-    async with await get_db() as db:
-        try:
+    try:
+        async with await get_db() as db:
             cursor = await db.execute(
-                """INSERT INTO voceros (consejo_id, nombre, cedula, cargo, telefono, email)
-                   VALUES (?, ?, ?, ?, ?, ?)""",
-                (data.consejo_id, data.nombre, data.cedula, data.cargo,
-                 data.telefono, data.email)
+                """INSERT INTO voceros ...""",
+                ...
             )
             await db.commit()
-            return {"id": cursor.lastrowid, "mensaje": "Vocero registrado exitosamente"}
-        except Exception as e:
-            if "UNIQUE" in str(e):
-                raise HTTPException(status_code=400, detail="Ya existe un vocero con esa cédula")
-            raise HTTPException(status_code=500, detail=str(e))
+
+            # Invalidar cache
+            from backend.universal_agent import invalidar_cache
+            invalidar_cache()
+
+            return {"id": cursor.lastrowid, "mensaje": "Vocero creado exitosamente"}
+    except Exception as e:
+        if "UNIQUE" in str(e):
+            raise HTTPException(status_code=400, detail="Ya existe un vocero con esa cédula")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.put("/voceros/{vocero_id}")
 async def actualizar_vocero(vocero_id: int, data: VoceroCreate):
@@ -137,14 +176,24 @@ async def actualizar_vocero(vocero_id: int, data: VoceroCreate):
              data.telefono, data.email, vocero_id)
         )
         await db.commit()
+                # Invalidar cache
+        from backend.universal_agent import invalidar_cache
+        invalidar_cache()
         return {"mensaje": "Vocero actualizado exitosamente"}
 
 @router.delete("/voceros/{vocero_id}")
 async def eliminar_vocero(vocero_id: int):
     """Desactiva un vocero (baja lógica)."""
     async with await get_db() as db:
-        await db.execute("UPDATE voceros SET activo=0 WHERE id=?", (vocero_id,))
+        await db.execute(
+            "UPDATE voceros SET activo=0 WHERE id=?", (vocero_id,)
+        )
         await db.commit()
+
+        # Invalidar cache
+        from backend.universal_agent import invalidar_cache
+        invalidar_cache()
+
         return {"mensaje": "Vocero desactivado exitosamente"}
 
 # ── Estadísticas ──────────────────────────────────────────────────────────────

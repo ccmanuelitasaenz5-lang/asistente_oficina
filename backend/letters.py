@@ -2,11 +2,14 @@ import os
 import logging
 from datetime import datetime
 from pathlib import Path
-from backend.config import CARTAS_PATH, COMUNA_INFO, OFICIO_PREFIJO
+from backend.config import (
+    CARTAS_PATH, COMUNA_INFO, OFICIO_PREFIJO, 
+    VOCERO_DEFAULT_NOMBRE, VOCERO_DEFAULT_CARGO, VOCERO_DEFAULT_TELEFONO
+)
 from backend.database import get_db, obtener_siguiente_numero_oficio
 from backend.ai_router import generar_texto
 
-logging.basicConfig(level=logging.INFO)
+
 logger = logging.getLogger("letters")
 
 CARTAS_PATH.mkdir(parents=True, exist_ok=True)
@@ -218,9 +221,11 @@ async def html_a_pdf(html_content: str, pdf_filepath) -> bool:
 
 def carta_a_docx(numero_oficio: str, fecha: str, destinatario: str, 
                  cargo_destinatario: str, asunto: str, contenido: str, 
-                 docx_filepath, firma_nombre: str = "Enrique Maduro", 
-                 firma_cargo: str = "Responsable de la Sala de Autogobierno") -> bool:
+                 docx_filepath, firma_nombre: str = None, 
+                 firma_cargo: str = None) -> bool:
     """Genera una carta en formato .docx usando python-docx."""
+    firma_nombre = firma_nombre or VOCERO_DEFAULT_NOMBRE
+    firma_cargo = firma_cargo or VOCERO_DEFAULT_CARGO
     try:
         from docx import Document
         from docx.shared import Pt, Cm
@@ -312,10 +317,10 @@ async def crear_y_guardar_carta(
     # 1. Obtener número de oficio CPPO
     numero_oficio = await obtener_siguiente_numero_oficio(prefijo=OFICIO_PREFIJO)
     
-    # 2. Resolver vocero firmante (fijo: Enrique Maduro si no se selecciona otro)
-    vocero_nombre = "Enrique Maduro"
-    vocero_cargo = "Responsable de la Sala de Autogobierno"
-    vocero_telefono = "04166880411"
+    # 2. Resolver vocero firmante (fijo: vocero por defecto si no se selecciona otro)
+    vocero_nombre = VOCERO_DEFAULT_NOMBRE
+    vocero_cargo = VOCERO_DEFAULT_CARGO
+    vocero_telefono = VOCERO_DEFAULT_TELEFONO
     
     if vocero_firma_id:
         async with await get_db() as db:

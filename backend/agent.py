@@ -58,13 +58,10 @@ async def _cargar_voceros_db() -> List[Dict[str, Any]]:
 
 
 async def _asegurar_datos():
-    now = datetime.now()
     if _data_cache["voceros"] is None:
         _data_cache["voceros"] = await _cargar_voceros_db()
-        _data_cache["loaded_at"] = now
-    elif (now - _data_cache["loaded_at"]).total_seconds() > 60:
-        _data_cache["voceros"] = await _cargar_voceros_db()
-        _data_cache["loaded_at"] = now
+        _data_cache["loaded_at"] = datetime.now()
+        logger.info(f"Total voceros cargados: {len(_data_cache['voceros'])} (SQLite)")
 
 
 async def _valores_columna(col_key: str) -> List[str]:
@@ -83,6 +80,7 @@ async def consultar(query: str) -> dict:
     """
     from backend.ai_router import generar_texto
 
+    _data_cache["voceros"] = None
     await _asegurar_datos()
     voceros = _data_cache["voceros"]
 
@@ -173,7 +171,10 @@ Reglas:
 - Para "Principal" o "Suplente", usa {{"campo": "tipo", "operador": "igual", "valor": "principal"}}
 - Para ordenar por votos de mayor a menor, usa {{"campo": "votos", "direccion": "desc"}}
 - Para ordenar por votos de menor a mayor, usa {{"campo": "votos", "direccion": "asc"}}
-- Si no hay filtros claros, deja filtros como lista vacía"""
+- Si no hay filtros claros, deja filtros como lista vacía
+- IMPORTANTE: cuando pidan "voceros principales" o "lista de principales", SIEMPRE añade {{"campo": "tipo", "operador": "igual", "valor": "principal"}}
+- IMPORTANTE: cuando pidan cédula Y teléfono, NO omitas ninguno — ambos están disponibles en los datos
+- IMPORTANTE: usa "limite": null para devolver TODOS los resultados sin truncar"""
 
     try:
         plan_raw = await generar_texto(plan_prompt, system_instruction=system_schema)
@@ -311,6 +312,12 @@ Reglas:
         lines.append(f"**Total de voceros: {total}**")
         tabla_md = "\n".join(lines)
 
+        # Tabla detallada adicional con C.I. y teléfono para conteos agrupados
+        tabla_md += f"\n\n| # | Nombre Completo | Cédula | Teléfono | Vocería | Tipo | Consejo Comunal |\n|---|---|---|---|---|---|---|\n"
+        for i, v in enumerate(resultados, 1):
+            tel = v.get('telefono') or '—'
+            tabla_md += f"| {i} | {v['nombre_completo']} | {v['cedula'] or '—'} | {tel} | {v['voceria']} | {v['tipo']} | {v['consejo_comunal']} |\n"
+
         respuesta = f"""**{explicacion}**
 
 Se encontraron **{total} voceros** agrupados por **{agrupar_por.replace('_', ' ')}**:
@@ -318,23 +325,24 @@ Se encontraron **{total} voceros** agrupados por **{agrupar_por.replace('_', ' '
 """
         for grupo, miembros in sorted(grupos.items()):
             respuesta += f"\n**{grupo}** ({len(miembros)} voceros):\n"
-            for m in miembros[:10]:
-                respuesta += f"  - {m['nombre_completo']} ({m.get('voceria', '')})"
+            for m in miembros:
+                respuesta += f"  - **{m['nombre_completo']}** ({m.get('voceria', '')})"
                 if m.get("cedula"):
-                    respuesta += f" - C.I: {m['cedula']}"
+                    respuesta += f" — C.I: {m['cedula']}"
+                if m.get("telefono"):
+                    respuesta += f" — Tel: {m['telefono']}"
                 if m.get("votos"):
-                    respuesta += f" - {m['votos']} votos"
+                    respuesta += f" — {m['votos']} votos"
                 respuesta += "\n"
-            if len(miembros) > 10:
-                respuesta += f"  ... y {len(miembros) - 10} más\n"
     else:
         tabla_md = f"""**{explicacion}**
 
-| # | Nombre Completo | Cédula | Vocería | Tipo | Votos | Consejo Comunal |
-|---|---|---|---|---|---|---|
+| # | Nombre Completo | Cédula | Teléfono | Vocería | Tipo | Votos | Consejo Comunal |
+|---|---|---|---|---|---|---|---|
 """
         for i, v in enumerate(resultados, 1):
-            tabla_md += f"| {i} | {v['nombre_completo']} | {v['cedula']} | {v['voceria']} | {v['tipo']} | {v.get('votos', 0)} | {v['consejo_comunal']} |\n"
+            tel = v.get('telefono') or '—'
+            tabla_md += f"| {i} | {v['nombre_completo']} | {v['cedula'] or '—'} | {tel} | {v['voceria']} | {v['tipo']} | {v.get('votos', 0)} | {v['consejo_comunal']} |\n"
         tabla_md += f"\n**Total: {total} vocero(s)**"
 
         respuesta = f"""**{explicacion}**
@@ -342,11 +350,11 @@ Se encontraron **{total} voceros** agrupados por **{agrupar_por.replace('_', ' '
 Se encontraron **{total} vocero(s)** que coinciden con los criterios:
 
 """
-        for v in resultados[:15]:
-            voto_str = f" - {v['votos']} votos" if v.get("votos") else ""
-            respuesta += f"  - **{v['nombre_completo']}** - {v['voceria']} ({v['tipo']}){voto_str} - {v['consejo_comunal']}\n"
-        if total > 15:
-            respuesta += f"\n... y {total - 15} más. Revisa la tabla completa."
+        for v in resultados:
+            tel_str = f" — Tel: {v['telefono']}" if v.get("telefono") else ""
+            ci_str = f" — C.I: {v['cedula']}" if v.get("cedula") else ""
+            voto_str = f" — {v['votos']} votos" if v.get("votos") else ""
+            respuesta += f"  - **{v['nombre_completo']}** ({v['voceria']}, {v['tipo']}){ci_str}{tel_str}{voto_str} — {v['consejo_comunal']}\n"
 
     return {
         "respuesta": respuesta,

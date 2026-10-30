@@ -1025,6 +1025,398 @@
 
         .modal-close:hover { color: var(--txt); }
 
+    /* ==========================================================================
+   NUEVO DASHBOARD MODERN (GLASSMORPHISM & GRID)
+   ========================================================================== */
+
+/* Animaciones */
+@keyframes fadeUp {
+    0% { opacity: 0; transform: translateY(15px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulseGlow {
+    0% { box-shadow: 0 0 0 0 rgba(var(--kpi-color), 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(var(--kpi-color), 0); }
+    100% { box-shadow: 0 0 0 0 rgba(var(--kpi-color), 0); }
+}
+
+/* Contenedor Principal del Dashboard */
+.dash-modern-container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    animation: fadeUp 0.6s ease-out forwards;
+}
+
+/* Header del Dashboard */
+.dash-header-modern {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px;
+    background: linear-gradient(135deg, rgba(28,34,48,0.8) 0%, rgba(15,20,30,0.8) 100%);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 16px;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+
+.dash-welcome h3 {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    background: linear-gradient(90deg, #fff, #a1a1aa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.dash-welcome p {
+    color: var(--txt-muted);
+    font-size: 14px;
+}
+
+.dash-clock {
+    font-family: 'DM Sans', monospace;
+    font-size: 20px;
+    font-weight: 600;
+    color: #e6edf3;
+    background: rgba(0,0,0,0.2);
+    padding: 10px 20px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.05);
+}
+
+/* Grid de KPIs */
+.dash-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+}
+
+/* Tarjeta KPI Glassmorphism */
+.kpi-card-modern {
+    position: relative;
+    padding: 24px;
+    border-radius: 16px;
+    background: rgba(28,34,48,0.6);
+    border: 1px solid rgba(255,255,255,0.05);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.kpi-card-modern::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: var(--kpi-gradient);
+    opacity: 0.8;
+}
+
+.kpi-card-modern:hover {
+    transform: translateY(-5px);
+    background: rgba(35,42,60,0.8);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+    border-color: rgba(255,255,255,0.1);
+}
+
+.kpi-card-modern .kpi-icon-wrap {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: var(--kpi-gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.kpi-card-modern .kpi-icon-wrap i {
+    width: 24px; height: 24px;
+}
+
+.kpi-card-modern .kpi-value-modern {
+    font-size: 32px;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.2;
+    margin-bottom: 4px;
+}
+
+.kpi-card-modern .kpi-label-modern {
+    font-size: 13px;
+    color: var(--txt-muted);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Grillas Medias y Bajas */
+.dash-mid-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 24px;
+}
+@media (max-width: 1024px) {
+    .dash-mid-grid { grid-template-columns: 1fr; }
+}
+
+.dash-bottom-grid {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap: 24px;
+}
+@media (max-width: 768px) {
+    .dash-bottom-grid { grid-template-columns: 1fr; }
+}
+
+/* Tarjetas Modulares Glass */
+.dash-glass-panel {
+    background: rgba(28,34,48,0.5);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 16px;
+    padding: 24px;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    display: flex;
+    flex-direction: column;
+}
+
+.dash-glass-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.dash-glass-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.dash-glass-title i {
+    color: var(--primary);
+}
+
+/* Listas en el Dashboard */
+.dash-mini-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.dash-mini-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 10px;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+}
+
+.dash-mini-item:hover {
+    background: rgba(255,255,255,0.03);
+    border-color: rgba(255,255,255,0.05);
+}
+
+.dash-mini-item .dot {
+    width: 10px; height: 10px; border-radius: 50%; background: #3b82f6; flex-shrink: 0;
+}
+.dash-mini-item .dot.urgent { background: #ef4444; box-shadow: 0 0 10px rgba(239,68,68,0.5); animation: pulseGlow 2s infinite; }
+.dash-mini-item .dot.soon { background: #f59e0b; }
+.dash-mini-item .dot.done { background: #22c55e; }
+
+.dash-mini-content { flex: 1; min-width: 0; }
+.dash-mini-title { font-weight: 500; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dash-mini-sub { font-size: 12px; color: var(--txt-muted); margin-top: 2px; }
+
+/* Buscador Rápido */
+.dash-search-glass {
+    position: relative;
+    margin-bottom: 15px;
+}
+.dash-search-glass i {
+    position: absolute; left: 15px; top: 50%; transform: translateY(-50%);
+    color: var(--txt-muted); width: 18px; height: 18px;
+}
+.dash-search-glass input {
+    width: 100%;
+    padding: 14px 15px 14px 45px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    color: #fff;
+    font-family: inherit;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+.dash-search-glass input:focus {
+    border-color: var(--primary);
+    background: rgba(0,0,0,0.5);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+
+        /* Subtabs de Censo */
+        .censo-subtab-pane {
+            display: none;
+            margin-top: 14px;
+        }
+        .censo-subtab-pane.active {
+            display: block;
+        }
+        /* Responsividad para KPIs de Rendición y Proyectos */
+        @media (max-width: 900px) {
+            .kpi-row { grid-template-columns: repeat(2, 1fr) !important; }
+        }
+        @media (max-width: 540px) {
+            .kpi-row { grid-template-columns: 1fr !important; }
+        }
+        /* Modales de autogobierno */
+        .modal-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-backdrop.open {
+            display: flex;
+        }
+        .modal-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            width: 92%;
+            max-width: 460px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+        .modal-header h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--txt);
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--txt-muted);
+            font-size: 22px;
+            cursor: pointer;
+            line-height: 1;
+        }
+        .modal-close:hover { color: var(--txt); }
+        .modal-box form {
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 14px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--txt-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-bottom: 6px;
+        }
+        .form-group .input,
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            background: var(--bg-card-2);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--txt);
+            font-family: var(--font);
+            font-size: 12px;
+            padding: 8px 10px;
+            outline: none;
+            transition: border-color 0.15s;
+            box-sizing: border-box;
+        }
+        .form-group .input:focus,
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus { border-color: var(--accent); }
+        /* Spinner genérico */
+        .spinner {
+            width: 20px; height: 20px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            margin: 0 auto 8px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        /* KPI row */
+        .kpi-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+        }
+        .kpi-card {
+            background: var(--bg-card-2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .kpi-card.blue { border-left: 3px solid var(--accent); }
+        .kpi-card.gold { border-left: 3px solid var(--gold); }
+        .kpi-card.green { border-left: 3px solid var(--green); }
+        .kpi-card.purple { border-left: 3px solid #a855f7; }
+        .kpi-icon svg, .kpi-icon i { width: 18px; height: 18px; color: var(--txt-muted); }
+        .kpi-value { font-size: 20px; font-weight: 700; color: var(--txt); }
+        .kpi-label { font-size: 11px; color: var(--txt-muted); }
+        /* Page header */
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 18px;
+        }
+        .page-header h3 { font-size: 16px; font-weight: 700; color: var(--txt); }
+        .page-header p { font-size: 12px; color: var(--txt-muted); margin-top: 3px; }
+        .header-actions { display: flex; gap: 8px; }
+        /* Table styles */
+        .table-container { overflow-x: auto; }
+        .table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .table th { padding: 8px 12px; text-align: left; color: var(--txt-muted); border-bottom: 1px solid var(--border); font-weight: 600; font-size: 11px; text-transform: uppercase; }
+        .table td { padding: 10px 12px; color: var(--txt); border-bottom: 1px solid rgba(42,51,66,0.5); }
+        .table tr:hover td { background: rgba(255,255,255,0.02); }
+    
     </style>
 </head>
 <body>
@@ -1042,7 +1434,7 @@
 <div class="modal-backdrop" id="modal-vocero">
     <div class="modal">
         <div class="modal-header">
-            <h4>Registrar Nuevo Vocero</h4>
+            <h4 id="modal-vocero-title">Registrar Nuevo Vocero</h4>
             <button class="modal-close" onclick="closeModal('modal-vocero')">
                 <i data-lucide="x" style="width:16px;height:16px"></i>
             </button>
@@ -1248,6 +1640,37 @@
                 <span>Tareas y Alertas</span>
                 <span class="nav-badge warning" id="badge-tasks">0</span>
             </button>
+            <span class="nav-section-label">Autogobierno Comunal</span>
+            <button class="nav-btn" data-tab="instancias">
+                <i data-lucide="landmark"></i>
+                <span>Instancias de Gobierno</span>
+                <span class="nav-badge">LOC</span>
+            </button>
+            <button class="nav-btn" data-tab="comisiones">
+                <i data-lucide="briefcase"></i>
+                <span>Comisiones de Gestión</span>
+                <span class="nav-badge">LOC</span>
+            </button>
+            <button class="nav-btn" data-tab="censo">
+                <i data-lucide="home"></i>
+                <span>Censo Comunal</span>
+                <span class="nav-badge">Censo</span>
+            </button>
+            <button class="nav-btn" data-tab="rendiciones">
+                <i data-lucide="dollar-sign"></i>
+                <span>Rendición de Cuentas</span>
+                <span class="nav-badge">Art. 52</span>
+            </button>
+            <button class="nav-btn" data-tab="gaceta">
+                <i data-lucide="file-check"></i>
+                <span>Gaceta Comunal</span>
+                <span class="nav-badge">Art. 41</span>
+            </button>
+            <button class="nav-btn" data-tab="proyectos">
+                <i data-lucide="hammer"></i>
+                <span>Proyectos (ACA)</span>
+                <span class="nav-badge">ACA</span>
+            </button>
         </nav>
 
         <div class="sidebar-footer">
@@ -1287,117 +1710,114 @@
 
             <!-- ══ DASHBOARD ══════════════════════════════ -->
             <section id="tab-dashboard" class="tab-pane active">
-                <div class="dashboard">
+                <div class="dash-modern-container">
+                    
+                    <!-- Header -->
+                    <div class="dash-header-modern">
+                        <div class="dash-welcome">
+                            <h3 id="dash-greeting">Resumen de Gestión Comunal</h3>
+                            <p>Monitoreo en tiempo real de actividades y tareas.</p>
+                        </div>
+                        <div class="dash-clock" id="dash-live-clock">--:--:--</div>
+                    </div>
 
-                    <!-- KPI Row -->
-                    <div class="kpi-row">
-                        <div class="kpi-card blue">
-                            <div class="kpi-icon"><i data-lucide="calendar-check"></i></div>
-                            <div class="kpi-value" id="kpi-acts">—</div>
-                            <div class="kpi-label">Actividades este mes</div>
-                            <div class="kpi-delta up" id="kpi-acts-delta"></div>
+                    <!-- KPI Grid -->
+                    <div class="dash-kpi-grid">
+                        <div class="kpi-card-modern" style="--kpi-gradient: linear-gradient(135deg, #3b82f6, #2563eb);">
+                            <div class="kpi-icon-wrap"><i data-lucide="calendar-check"></i></div>
+                            <div>
+                                <div class="kpi-value-modern" id="kpi-acts">—</div>
+                                <div class="kpi-label-modern">Actividades este mes</div>
+                            </div>
                         </div>
-                        <div class="kpi-card green">
-                            <div class="kpi-icon"><i data-lucide="users"></i></div>
-                            <div class="kpi-value" id="kpi-part">—</div>
-                            <div class="kpi-label">Participantes acumulados</div>
+                        
+                        <div class="kpi-card-modern" style="--kpi-gradient: linear-gradient(135deg, #10b981, #059669);">
+                            <div class="kpi-icon-wrap"><i data-lucide="users"></i></div>
+                            <div>
+                                <div class="kpi-value-modern" id="kpi-part">—</div>
+                                <div class="kpi-label-modern">Participantes</div>
+                            </div>
                         </div>
-                        <div class="kpi-card gold">
-                            <div class="kpi-icon"><i data-lucide="mail"></i></div>
-                            <div class="kpi-value" id="kpi-cartas">—</div>
-                            <div class="kpi-label">Cartas emitidas 2026</div>
+
+                        <div class="kpi-card-modern" style="--kpi-gradient: linear-gradient(135deg, #f59e0b, #d97706);">
+                            <div class="kpi-icon-wrap"><i data-lucide="mail"></i></div>
+                            <div>
+                                <div class="kpi-value-modern" id="kpi-cartas">—</div>
+                                <div class="kpi-label-modern">Cartas Emitidas</div>
+                            </div>
                         </div>
-                        <div class="kpi-card purple">
-                            <div class="kpi-icon"><i data-lucide="alert-circle"></i></div>
-                            <div class="kpi-value" id="kpi-tareas">—</div>
-                            <div class="kpi-label">Tareas pendientes</div>
+
+                        <div class="kpi-card-modern" style="--kpi-gradient: linear-gradient(135deg, #8b5cf6, #7c3aed);">
+                            <div class="kpi-icon-wrap"><i data-lucide="list-todo"></i></div>
+                            <div>
+                                <div class="kpi-value-modern" id="kpi-tareas">—</div>
+                                <div class="kpi-label-modern">Tareas Pendientes</div>
+                            </div>
+                        </div>
+
+                        <div class="kpi-card-modern" style="--kpi-gradient: linear-gradient(135deg, #ef4444, #dc2626); --kpi-color: 239,68,68;">
+                            <div class="kpi-icon-wrap" style="animation: pulseGlow 2s infinite;"><i data-lucide="alert-triangle"></i></div>
+                            <div>
+                                <div class="kpi-value-modern" id="kpi-vencidas">—</div>
+                                <div class="kpi-label-modern">Tareas Vencidas</div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Mid row: Chart + Mini tasks -->
-                    <div class="dash-mid">
-                        <div class="card">
-                            <div class="card-header">
-                                <div class="card-title">
-                                    <i data-lucide="bar-chart"></i>
-                                    Actividades por Categoría — últimos 30 días
-                                </div>
-                                <button class="btn" onclick="switchTab('activities')" style="font-size:11px;padding:4px 10px">
-                                    Ver todo
-                                </button>
+                    <!-- Mid Grid -->
+                    <div class="dash-mid-grid">
+                        <div class="dash-glass-panel" style="min-height: 350px;">
+                            <div class="dash-glass-header">
+                                <div class="dash-glass-title"><i data-lucide="bar-chart-2"></i> Actividades por Categoría</div>
+                                <button class="btn" onclick="switchTab('activities')" style="font-size:12px;padding:4px 12px;background:rgba(255,255,255,0.1);border:none;">Ver todo</button>
                             </div>
-                            <div class="chart-wrap">
+                            <div style="flex:1;position:relative;">
                                 <canvas id="chart-categorias"></canvas>
                             </div>
                         </div>
 
-                        <div class="card">
-                            <div class="card-header">
-                                <div class="card-title">
-                                    <i data-lucide="clock"></i>
-                                    Próximas Tareas
-                                </div>
-                                <button class="btn" onclick="switchTab('tasks')" style="font-size:11px;padding:4px 10px">
-                                    Ver agenda
-                                </button>
+                        <div class="dash-glass-panel">
+                            <div class="dash-glass-header">
+                                <div class="dash-glass-title"><i data-lucide="clock"></i> Próximas Tareas</div>
+                                <button class="btn" onclick="switchTab('tasks')" style="font-size:12px;padding:4px 12px;background:rgba(255,255,255,0.1);border:none;">Agenda</button>
                             </div>
-                            <div class="card-body" id="dash-mini-tasks">
-                                <div class="empty-state" style="padding:20px 0">
+                            <div class="dash-mini-list" id="dash-mini-tasks">
+                                <div class="empty-state" style="padding:20px 0; border:none; background:transparent;">
                                     <p>Sin tareas pendientes</p>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Bottom row -->
-                    <div class="dash-bottom">
-                        <!-- Last activity -->
-                        <div class="card">
-                            <div class="card-header">
-                                <div class="card-title">
-                                    <i data-lucide="zap"></i>
-                                    Última Actividad Registrada
-                                </div>
+                    <!-- Bottom Grid -->
+                    <div class="dash-bottom-grid">
+                        <div class="dash-glass-panel">
+                            <div class="dash-glass-header">
+                                <div class="dash-glass-title"><i data-lucide="zap"></i> Última Actividad Registrada</div>
                             </div>
-                            <div class="card-body" id="dash-last-activity">
-                                <div class="empty-state" style="padding:20px 0">
+                            <div id="dash-last-activity" style="display:flex;align-items:center;padding:10px 0;">
+                                <div class="empty-state" style="padding:20px 0; border:none; background:transparent;">
                                     <p>Sin actividades registradas</p>
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Directorio rápido -->
-                        <div class="card">
-                            <div class="card-header">
-                                <div class="card-title">
-                                    <i data-lucide="search"></i>
-                                    Directorio Rápido de Voceros
-                                </div>
+                        <div class="dash-glass-panel">
+                            <div class="dash-glass-header">
+                                <div class="dash-glass-title"><i data-lucide="search"></i> Directorio Rápido</div>
                             </div>
-                            <div class="card-body" style="display:flex;flex-direction:column;gap:10px">
-                                <div class="search-input-wrap">
-                                    <i data-lucide="search"></i>
-                                    <input class="input" id="dash-search-vocero"
-                                        placeholder="Nombre o cédula...">
-                                </div>
-                                <div id="dash-vocero-results" style="font-size:13px;color:var(--txt-muted)">
-                                    Escribe para buscar un vocero en cualquier consejo.
-                                </div>
-                                <div style="border-top:1px solid var(--border);padding-top:10px;display:flex;gap:8px;flex-wrap:wrap">
-                                    <button class="unidad-btn" onclick="quickReportUnidad('Legislativa')">
-                                        <i data-lucide="gavel" style="display:inline;width:11px;height:11px;margin-right:4px"></i>
-                                        Voceros Legislativos
-                                    </button>
-                                    <button class="unidad-btn" onclick="quickReportUnidad('Ejecutiva')">
-                                        Voceros Ejecutivos
-                                    </button>
-                                    <button class="unidad-btn" onclick="quickReportUnidad('Contraloría Social')">
-                                        Contraloría
-                                    </button>
-                                    <button class="unidad-btn" onclick="switchTab('padron')">
-                                        Ver padrón completo →
-                                    </button>
-                                </div>
+                            <div class="dash-search-glass" style="display:flex; gap:8px;">
+                                <i data-lucide="search" style="margin-top:2px;"></i>
+                                <input type="text" id="dash-search-vocero" placeholder="Nombre o cédula..." style="flex:1; background:transparent; border:none; color:#fff; outline:none;">
+                                <button class="btn" style="padding:4px 10px; font-size:12px; background:rgba(255,255,255,0.1); color:#fff; border:none; cursor:pointer;" onclick="document.getElementById('dash-search-vocero').dispatchEvent(new Event('input'))">Buscar</button>
+                            </div>
+                            <div id="dash-vocero-results" style="font-size:13px;color:var(--txt-muted);padding-top:10px;">
+                                Escribe para buscar un vocero en cualquier consejo.
+                            </div>
+                            <div style="border-top:1px solid rgba(255,255,255,0.05);padding-top:15px;margin-top:15px;display:flex;gap:8px;flex-wrap:wrap">
+                                <button class="btn" style="font-size:11px;padding:4px 10px;background:rgba(255,255,255,0.05);" onclick="quickReportUnidad('Legislativa')">Legislativos</button>
+                                <button class="btn" style="font-size:11px;padding:4px 10px;background:rgba(255,255,255,0.05);" onclick="quickReportUnidad('Ejecutiva')">Ejecutivos</button>
+                                <button class="btn" style="font-size:11px;padding:4px 10px;background:rgba(255,255,255,0.05);" onclick="quickReportUnidad('Contraloría Social')">Contraloría</button>
+                                <button class="btn" style="font-size:11px;padding:4px 10px;background:var(--primary);color:#fff;" onclick="switchTab('padron')">Ir al padrón →</button>
                             </div>
                         </div>
                     </div>
@@ -1419,7 +1839,7 @@
                                 <i data-lucide="building-2"></i>
                                 Nuevo Consejo
                             </button>
-                            <button class="btn btn-primary" onclick="openModal('modal-vocero')">
+                            <button class="btn btn-primary" onclick="openNewVoceroModal()">
                                 <i data-lucide="user-plus"></i>
                                 Agregar Vocero
                             </button>
@@ -1492,6 +1912,7 @@
                                         <th>Consejo Comunal</th>
                                         <th>Teléfono</th>
                                         <th>Estado</th>
+                                        <th style="text-align:right">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody id="voceros-tbody">
@@ -1794,6 +2215,10 @@
                                 <div class="form-group"><label>Título</label><input type="text" id="task-title" placeholder="Ej. Reunión con Ministerio de Comunas" required></div>
                                 <div class="form-group"><label>Descripción</label><textarea id="task-desc" rows="3" placeholder="Detalles..."></textarea></div>
                                 <div class="form-row">
+                                    <div class="form-group col-6"><label>Responsable (opcional)</label><input type="text" id="task-responsable" placeholder="Juan Pérez"></div>
+                                    <div class="form-group col-6"><label>Consejo Comunal (opcional, ID)</label><input type="number" id="task-consejo" placeholder="ID"></div>
+                                </div>
+                                <div class="form-row">
                                     <div class="form-group col-6"><label>Fecha y Hora</label><input type="datetime-local" id="task-date" required></div>
                                     <div class="form-group col-6"><label>Días de anticipación para alerta</label><input type="number" id="task-reminder" value="1" min="1" max="7"></div>
                                 </div>
@@ -1808,20 +2233,255 @@
                 </div>
             </section>
 
+
+            <!-- ══ INSTANCIAS DE GOBIERNO ═══════════════════ -->
+            <section id="tab-instancias" class="tab-pane">
+                <div class="padron-page">
+                    <div class="page-header">
+                        <div>
+                            <h3>Instancias de Autogobierno Comunal</h3>
+                            <p>Gestión y conformación de las 5 instancias de gobierno de la Comuna (Art. 28 LOC).</p>
+                        </div>
+                    </div>
+                    <div id="instancias-grid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(320px, 1fr));gap:16px"></div>
+                </div>
+            </section>
+
+            <!-- ══ COMISIONES DE GESTIÓN ════════════════════ -->
+            <section id="tab-comisiones" class="tab-pane">
+                <div class="padron-page">
+                    <div class="page-header">
+                        <div>
+                            <h3>Comisiones de Gestión Comunal</h3>
+                            <p>Articulación temática de las 6 comisiones permanentes de trabajo (Art. 30 LOC).</p>
+                        </div>
+                    </div>
+                    <div id="comisiones-list"></div>
+                </div>
+            </section>
+
+            <!-- ══ CENSO COMUNAL ═══════════════════════════ -->
+            <section id="tab-censo" class="tab-pane">
+                <div class="padron-page">
+                    <div class="page-header">
+                        <div>
+                            <h3>Padrón Censal Comunal</h3>
+                            <p>Levantamiento demográfico, núcleos familiares, atención a la discapacidad y padrón electoral.</p>
+                        </div>
+                        <div class="header-actions">
+                            <button class="btn btn-primary" onclick="openModal('modal-nueva-familia')">
+                                <i data-lucide="home"></i>
+                                <span>Censar Familia</span>
+                            </button>
+                            <button class="btn" onclick="openModal('modal-nuevo-elector')">
+                                <i data-lucide="user-plus"></i>
+                                <span>Registrar Elector</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="subtabs-bar" style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:10px">
+                        <button class="btn active" id="censo-subtab-familias" onclick="switchCensoSubTab('familias')">
+                            <i data-lucide="users"></i> Familias (<span id="censo-familias-count">0</span>)
+                        </button>
+                        <button class="btn" id="censo-subtab-estadisticas" onclick="switchCensoSubTab('estadisticas')">
+                            <i data-lucide="bar-chart-2"></i> Estadísticas Demográficas
+                        </button>
+                        <button class="btn" id="censo-subtab-electoral" onclick="switchCensoSubTab('electoral')">
+                            <i data-lucide="check-square"></i> Padrón Electoral (<span id="censo-electoral-count">0</span>)
+                        </button>
+                    </div>
+
+                    <!-- Vista Familias -->
+                    <div id="censo-view-familias">
+                        <div class="filter-bar" style="margin-bottom:14px;display:flex;gap:10px">
+                            <input type="text" id="censo-search" class="input" placeholder="Buscar por jefe de familia, cédula o código..." style="flex:1" onkeyup="if(event.key==='Enter')loadCensoFamilias()">
+                            <select id="censo-filter-consejo" class="input" style="width:240px" onchange="loadCensoFamilias()">
+                                <option value="">Todos los Consejos Comunales</option>
+                            </select>
+                            <button class="btn btn-primary" onclick="loadCensoFamilias()"><i data-lucide="search"></i> Buscar</button>
+                        </div>
+                        <div class="table-container">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Código</th>
+                                        <th>Jefe(a) de Familia</th>
+                                        <th>Cédula</th>
+                                        <th>Consejo Comunal</th>
+                                        <th>Habitantes</th>
+                                        <th>Fecha Censo</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="censo-familias-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Vista Estadísticas -->
+                    <div id="censo-view-estadisticas" style="display:none">
+                        <div id="censo-stats-container"></div>
+                    </div>
+
+                    <!-- Vista Electoral -->
+                    <div id="censo-view-electoral" style="display:none">
+                        <div class="table-container">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Nombre y Apellidos</th>
+                                        <th>Cédula</th>
+                                        <th>Consejo Comunal</th>
+                                        <th>Condición</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="censo-electoral-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ══ RENDICIÓN DE CUENTAS ════════════════════ -->
+            <section id="tab-rendiciones" class="tab-pane">
+                <div class="padron-page">
+                    <div class="page-header">
+                        <div>
+                            <h3>Rendición Anual de Cuentas (Art. 52 LOC)</h3>
+                            <p>Transparencia presupuestaria, memoria y cuenta de las instancias de gobierno y comisiones.</p>
+                        </div>
+                        <button class="btn btn-primary" onclick="openModal('modal-nueva-rendicion')">
+                            <i data-lucide="plus"></i>
+                            <span>Asentar Rendición</span>
+                        </button>
+                    </div>
+
+                    <div class="kpi-row" style="margin-bottom:18px">
+                        <div class="kpi-card blue">
+                            <div class="kpi-icon"><i data-lucide="file-text"></i></div>
+                            <div class="kpi-value" id="kpi-rend-total">0</div>
+                            <div class="kpi-label">Rendiciones Registradas</div>
+                        </div>
+                        <div class="kpi-card gold">
+                            <div class="kpi-icon"><i data-lucide="credit-card"></i></div>
+                            <div class="kpi-value" id="kpi-rend-asignado">Bs. 0</div>
+                            <div class="kpi-label">Presupuesto Asignado</div>
+                        </div>
+                        <div class="kpi-card green">
+                            <div class="kpi-icon"><i data-lucide="trending-up"></i></div>
+                            <div class="kpi-value" id="kpi-rend-ejecutado">Bs. 0</div>
+                            <div class="kpi-label">Presupuesto Ejecutado</div>
+                        </div>
+                        <div class="kpi-card purple">
+                            <div class="kpi-icon"><i data-lucide="check-circle"></i></div>
+                            <div class="kpi-value" id="kpi-rend-aprobadas">0</div>
+                            <div class="kpi-label">Aprobadas por Parlamento</div>
+                        </div>
+                    </div>
+
+                    <div id="rendiciones-list"></div>
+                </div>
+            </section>
+
+            <!-- ══ GACETA COMUNAL ══════════════════════════ -->
+            <section id="tab-gaceta" class="tab-pane">
+                <div class="padron-page">
+                    <div class="page-header">
+                        <div>
+                            <h3>Gaceta Comunal Oficial</h3>
+                            <p>Órgano oficial de publicación de leyes, acuerdos, resoluciones y mandatos del Parlamento Comunal (Art. 41 LOC).</p>
+                        </div>
+                        <button class="btn btn-primary" onclick="openModal('modal-nueva-gaceta')">
+                            <i data-lucide="file-plus"></i>
+                            <span>Promulgar Decisión</span>
+                        </button>
+                    </div>
+
+                    <div style="margin-bottom:14px;color:var(--txt-muted);font-size:12px">
+                        Decisiones promulgadas: <strong id="gaceta-count" style="color:var(--txt)">0</strong>
+                    </div>
+
+                    <div id="gaceta-list"></div>
+                </div>
+            </section>
+
+            <!-- ══ PROYECTOS ACA ═══════════════════════════ -->
+            <section id="tab-proyectos" class="tab-pane">
+                <div class="padron-page">
+                    <div class="page-header">
+                        <div>
+                            <h3>Agenda Concreta de Acción (ACA)</h3>
+                            <p>Mapa de soluciones, proyectos de inversión y obras de infraestructura comunal.</p>
+                        </div>
+                        <div style="display:flex;gap:8px">
+                            <input type="file" id="input-importar-docx" accept=".docx" style="display:none" onchange="importarArchivoDocx(this)">
+                            <button class="btn" onclick="document.getElementById('input-importar-docx').click()" title="Importar tabla desde Microsoft Word">
+                                <i data-lucide="file-up"></i>
+                                <span>Importar Matriz (.docx)</span>
+                            </button>
+                            <button class="btn btn-primary" onclick="openModal('modal-nuevo-proyecto')">
+                                <i data-lucide="plus"></i>
+                                <span>Nueva Acción ACA (7T)</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- KPI Row Proyectos -->
+                    <div class="kpi-row" style="margin-bottom:18px">
+                        <div class="kpi-card blue">
+                            <div class="kpi-icon"><i data-lucide="target"></i></div>
+                            <div class="kpi-value" id="kpi-proy-total">0</div>
+                            <div class="kpi-label">Total Proyectos</div>
+                        </div>
+                        <div class="kpi-card gold">
+                            <div class="kpi-icon"><i data-lucide="dollar-sign"></i></div>
+                            <div class="kpi-value" id="kpi-proy-inversion">Bs. 0</div>
+                            <div class="kpi-label">Inversión Estimada</div>
+                        </div>
+                        <div class="kpi-card green">
+                            <div class="kpi-icon"><i data-lucide="activity"></i></div>
+                            <div class="kpi-value" id="kpi-proy-avance">0%</div>
+                            <div class="kpi-label">Avance Promedio</div>
+                        </div>
+                        <div class="kpi-card purple">
+                            <div class="kpi-icon"><i data-lucide="users"></i></div>
+                            <div class="kpi-value" id="kpi-proy-beneficiarios">0</div>
+                            <div class="kpi-label">Habitantes Beneficiarios</div>
+                        </div>
+                    </div>
+
+                    <div id="proyectos-grid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(320px, 1fr));gap:16px"></div>
+                </div>
+            </section>
+
         </div><!-- /content -->
     </div><!-- /main -->
 </div><!-- /shell -->
 
 <script>
+window.onerror = function(msg, url, line, col, err) {
+    const errorDiv = document.createElement('div');
+    errorDiv.style.cssText = 'position:fixed;top:0;left:0;width:100%;background:red;color:white;padding:20px;font-size:18px;z-index:99999;font-family:monospace;white-space:pre-wrap;';
+    errorDiv.innerHTML = '<b>JS ERROR DETECTED</b><br>Msg: ' + msg + '<br>Line: ' + line + '<br>Col: ' + col + '<br>Stack: ' + (err ? err.stack : 'N/A');
+    document.body.prepend(errorDiv);
+};
+window.addEventListener('unhandledrejection', function(event) {
+    const errorDiv = document.createElement('div');
+    errorDiv.style.cssText = 'position:fixed;top:0;left:0;width:100%;background:orange;color:white;padding:20px;font-size:18px;z-index:99999;font-family:monospace;white-space:pre-wrap;';
+    errorDiv.innerHTML = '<b>PROMISE ERROR DETECTED</b><br>Reason: ' + event.reason;
+    document.body.prepend(errorDiv);
+});
 // ─── Inicialización ────────────────────────────────────────────────
-lucide.createIcons();
+if(window.lucide)lucide.createIcons();
 
 const API = '';  // Vacío = mismo origen
 
 // ─── Navegación entre tabs ─────────────────────────────────────────
 const NAV_META = {
     dashboard:   { title: 'Dashboard General',              sub: 'Vista consolidada de la gestión comunal',    action: null },
-    padron:      { title: 'Padrón de Voceros',              sub: 'Directiva y estructura de todos los consejos', action: { label: 'Agregar Vocero', fn: () => openModal('modal-vocero') } },
+    padron:      { title: 'Padrón de Voceros',              sub: 'Directiva y estructura de todos los consejos', action: { label: 'Agregar Vocero', fn: () => openNewVoceroModal() } },
     search:      { title: 'Consulta Inteligente de Archivos', sub: 'Búsqueda RAG en documentos de la comuna',  action: null },
     letters:     { title: 'Generar Oficios',                sub: 'Cartas oficiales con IA',                    action: null },
     activities:  { title: 'Bitácora Comunal',               sub: 'Registro de actividades y eventos',         action: null },
@@ -1831,6 +2491,12 @@ const NAV_META = {
     actas:       { title: 'Acta de Elección',              sub: 'Extraer voceros y datos desde PDF del MPPPST',  action: null },
     reports:     { title: 'Informes de Gestión',            sub: 'PDF, HTML y Word de actividades',           action: null },
     tasks:       { title: 'Tareas y Alertas',               sub: 'Agenda comunal con Google Calendar',        action: null },
+    instancias:  { title: 'Instancias de Gobierno Comunal', sub: 'Gestión de las 5 instancias del autogobierno (LOC)', action: null },
+    comisiones:  { title: 'Comisiones de Gestión Comunal',  sub: 'Áreas temáticas y comités de articulación comunal', action: { label: 'Nueva Comisión', fn: () => openModal('modal-nueva-comision') } },
+    censo:       { title: 'Censo y Demografía Comunal',     sub: 'Expediente familiar, viviendas, servicios y padrón electoral', action: { label: 'Censar Familia', fn: () => openModal('modal-censo-familia') } },
+    rendiciones: { title: 'Rendición de Cuentas Anual',     sub: 'Control social y memoria financiera (Art. 52 LOC)', action: { label: 'Nueva Rendición', fn: () => openModal('modal-nueva-rendicion') } },
+    gaceta:      { title: 'Gaceta Comunal Oficial',         sub: 'Leyes comunales, acuerdos y decretos (Art. 41 LOC)', action: { label: 'Nueva Decisión', fn: () => openModal('modal-nueva-gaceta') } },
+    proyectos:   { title: 'Agenda Concreta de Acción (ACA)', sub: 'Inversión física, financiera y proyectos comunitarios', action: { label: 'Nuevo Proyecto', fn: () => openModal('modal-nuevo-proyecto') } },
 };
 
 function switchTab(id) {
@@ -1847,15 +2513,21 @@ function switchTab(id) {
     } else {
         btnAction.style.display = 'none';
     }
-    lucide.createIcons();
+    if(window.lucide)lucide.createIcons();
     if (id === 'dashboard') loadDashboard();
     if (id === 'padron')    loadPadron();
     if (id === 'activities') loadActivities();
-    if (id === 'letters')  loadLetterTypes(); loadLettersList();
+    if (id === 'letters') { loadLetterTypes(); loadLettersList(); }
     if (id === 'tasks')    loadTasks();
+    if (id === 'instancias')  loadInstancias();
+    if (id === 'comisiones')  loadComisiones();
+    if (id === 'censo')       loadCenso();
+    if (id === 'rendiciones') loadRendiciones();
+    if (id === 'gaceta')      loadGaceta();
+    if (id === 'proyectos')   loadProyectos();
     if (id === 'consultas') loadConsultas();
     if (id === 'actas') setupActasTab();
-    if (id === 'universal') setTimeout(() => lucide.createIcons(), 100);
+    if (id === 'universal') setTimeout(() => { if(window.lucide)lucide.createIcons() }, 100);
 }
 
 document.querySelectorAll('.nav-btn[data-tab]').forEach(btn => {
@@ -1866,7 +2538,7 @@ document.querySelectorAll('.nav-btn[data-tab]').forEach(btn => {
 function openModal(id) {
     document.getElementById(id).classList.add('open');
     if (id === 'modal-vocero') populateConsejoSelect();
-    lucide.createIcons();
+    if(window.lucide)lucide.createIcons();
 }
 
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
@@ -1912,6 +2584,15 @@ function escapeHTML(str) {
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
+function getUnidad(cargo) {
+    if (!cargo) return 'Otro';
+    const c = cargo.toLowerCase();
+    if (c.includes('legislaci') || c.includes('comisi') || c.includes('electoral')) return 'Legislativa';
+    if (c.includes('contralor')) return 'Contraloría Social';
+    if (c.includes('financ') || c.includes('administrat')) return 'Administración y Finanzas';
+    return 'Ejecutiva';
+}
+
 function badgeClass(unidad) {
     const map = {
         'Ejecutiva': 'badge-ejecutiva',
@@ -1924,10 +2605,22 @@ function badgeClass(unidad) {
 
 // ─── DASHBOARD ─────────────────────────────────────────────────────
 let chartCategorias = null;
+let dashClockInterval = null;
+
+function updateDashClock() {
+    const el = document.getElementById('dash-live-clock');
+    if (!el) return;
+    const now = new Date();
+    el.textContent = now.toLocaleTimeString('es-VE');
+}
 
 async function loadDashboard() {
     try {
-        // Load stats from new API
+        if (!dashClockInterval) {
+            updateDashClock();
+            dashClockInterval = setInterval(updateDashClock, 1000);
+        }
+
         const stats = await apiFetch('/api/dashboard/stats').catch(() => null);
         const acts = await apiFetch('/api/activities').catch(() => []);
         const tasks = await apiFetch('/api/tasks').catch(() => []);
@@ -1937,6 +2630,9 @@ async function loadDashboard() {
             document.getElementById('kpi-part').textContent    = (stats.participantes_mes || 0).toLocaleString();
             document.getElementById('kpi-cartas').textContent  = stats.cartas_mes;
             document.getElementById('kpi-tareas').textContent  = stats.tareas_pendientes;
+            if (document.getElementById('kpi-vencidas')) {
+                document.getElementById('kpi-vencidas').textContent = stats.tareas_vencidas;
+            }
         }
 
         const tareasPendientes = tasks.filter(t => !t.completada);
@@ -1950,8 +2646,19 @@ async function loadDashboard() {
         const labels = Object.keys(conteos);
         const values = Object.values(conteos);
 
-        const palette = ['#3b82f6','#22c55e','#f59e0b','#a855f7','#14b8a6','#ef4444','#f97316'];
         const ctx = document.getElementById('chart-categorias').getContext('2d');
+        
+        // Creamos gradientes para las barras
+        const gradients = [
+            ['#3b82f6', '#2563eb'], ['#10b981', '#059669'], ['#f59e0b', '#d97706'], 
+            ['#8b5cf6', '#7c3aed'], ['#ef4444', '#dc2626'], ['#14b8a6', '#0d9488']
+        ].map(colors => {
+            let g = ctx.createLinearGradient(0, 0, 0, 400);
+            g.addColorStop(0, colors[0]);
+            g.addColorStop(1, colors[1]);
+            return g;
+        });
+
         if (chartCategorias) chartCategorias.destroy();
         chartCategorias = new Chart(ctx, {
             type: 'bar',
@@ -1959,8 +2666,8 @@ async function loadDashboard() {
                 labels: labels.length ? labels : ['Sin actividades'],
                 datasets: [{
                     data: values.length ? values : [0],
-                    backgroundColor: labels.map((_, i) => palette[i % palette.length]),
-                    borderRadius: 6,
+                    backgroundColor: labels.length ? labels.map((_, i) => gradients[i % gradients.length]) : ['rgba(255,255,255,0.1)'],
+                    borderRadius: 8,
                     borderWidth: 0,
                 }]
             },
@@ -1970,35 +2677,37 @@ async function loadDashboard() {
                 plugins: {
                     legend: { display: false },
                     tooltip: {
-                        backgroundColor: '#1c2230',
-                        borderColor: '#2a3342',
+                        backgroundColor: 'rgba(15,20,30,0.9)',
+                        borderColor: 'rgba(255,255,255,0.1)',
                         borderWidth: 1,
-                        titleColor: '#e6edf3',
-                        bodyColor: '#8b949e',
+                        titleColor: '#fff',
+                        bodyColor: '#a1a1aa',
+                        padding: 12,
+                        cornerRadius: 8
                     }
                 },
                 scales: {
-                    x: { grid: { color: '#1c2230' }, ticks: { color: '#8b949e', font: { family: 'DM Sans' } } },
-                    y: { grid: { color: '#1c2230' }, ticks: { color: '#8b949e', stepSize: 1 } }
+                    x: { grid: { display: false }, ticks: { color: '#a1a1aa', font: { family: 'DM Sans' } } },
+                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, border: { display: false }, ticks: { color: '#a1a1aa', stepSize: 1 } }
                 }
             }
         });
 
         // Mini tasks
         const container = document.getElementById('dash-mini-tasks');
-        const upcoming = tareasPendientes.slice(0, 4);
+        const upcoming = tareasPendientes.slice(0, 5);
         if (upcoming.length === 0) {
-            container.innerHTML = '<div class="empty-state" style="padding:20px 0"><p>Sin tareas pendientes</p></div>';
+            container.innerHTML = '<div class="empty-state" style="padding:20px 0;border:none;background:transparent;"><p>Sin tareas pendientes</p></div>';
         } else {
             container.innerHTML = upcoming.map(t => {
                 const d = new Date(t.fecha_limite);
                 const diff = Math.ceil((d - Date.now()) / 864e5);
                 const dotClass = diff <= 1 ? 'urgent' : diff <= 3 ? 'soon' : '';
-                return `<div class="mini-task">
-                    <div class="task-dot ${dotClass}"></div>
-                    <div>
-                        <div class="task-name">${escapeHTML(t.titulo)}</div>
-                        <div class="task-when">${d.toLocaleDateString('es-VE', { day:'2-digit', month:'short', year:'numeric' })}</div>
+                return `<div class="dash-mini-item">
+                    <div class="dot ${dotClass}"></div>
+                    <div class="dash-mini-content">
+                        <div class="dash-mini-title">${escapeHTML(t.titulo)}</div>
+                        <div class="dash-mini-sub">${d.toLocaleDateString('es-VE', { day:'2-digit', month:'short' })}</div>
                     </div>
                 </div>`;
             }).join('');
@@ -2008,18 +2717,24 @@ async function loadDashboard() {
         const lastActContainer = document.getElementById('dash-last-activity');
         const ultimas = stats ? stats.ultimas_actividades : acts;
         if (!ultimas || ultimas.length === 0) {
-            lastActContainer.innerHTML = '<div class="empty-state" style="padding:20px 0"><p>Sin actividades registradas</p></div>';
+            lastActContainer.innerHTML = '<div class="empty-state" style="padding:20px 0;border:none;background:transparent;"><p>Sin actividades registradas</p></div>';
         } else {
             const last = ultimas[0];
             lastActContainer.innerHTML = `
-                <div class="activity-snippet">
-                    <div class="act-icon-wrap"><i data-lucide="calendar-check"></i></div>
-                    <div>
-                        <div class="act-meta">${escapeHTML(last.fecha)} · <span class="badge badge-ejecutiva">${escapeHTML(last.categoria)}</span> · ${last.participantes} participantes</div>
-                        <div class="act-desc">${escapeHTML(last.descripcion.slice(0, 160))}${last.descripcion.length > 160 ? '…' : ''}</div>
+                <div style="display:flex;gap:15px;align-items:center;width:100%;">
+                    <div style="width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg, #3b82f6, #2563eb);display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0;">
+                        <i data-lucide="zap"></i>
+                    </div>
+                    <div style="flex:1;">
+                        <div style="font-weight:600;color:#fff;margin-bottom:2px;">${escapeHTML(last.tipo)} - ${escapeHTML(last.categoria)}</div>
+                        <div style="font-size:12px;color:var(--txt-muted);display:flex;justify-content:space-between;">
+                            <span><i data-lucide="map-pin" style="width:12px;height:12px;display:inline;"></i> ${escapeHTML(last.comunidad_sector)}</span>
+                            <span>${new Date(last.fecha).toLocaleDateString()}</span>
+                        </div>
+                        <div style="font-size:13px;color:#a1a1aa;margin-top:6px;">${escapeHTML(last.descripcion.slice(0, 100))}${last.descripcion.length > 100 ? '...' : ''}</div>
                     </div>
                 </div>`;
-            lucide.createIcons();
+            if(window.lucide)lucide.createIcons();
         }
 
     } catch (e) {
@@ -2038,37 +2753,36 @@ document.getElementById('dash-search-vocero').addEventListener('input', async fu
         return;
     }
     try {
-        const data = await apiFetch(`/api/padron/voceros/buscar?q=${encodeURIComponent(q)}`);
-        if (!data.length) {
+        const data = await apiFetch(`/api/padron/voceros?q=${encodeURIComponent(q)}`);
+        if (!data || !data.length) {
             results.innerHTML = '<span style="color:var(--txt-muted)">Sin resultados.</span>';
             return;
         }
         results.innerHTML = data.slice(0, 3).map(v => `
-            <div style="padding:8px 0; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px">
-                <div class="avatar" style="width:28px;height:28px;font-size:10px">${initials(v.nombre_completo)}</div>
+            <div style="padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; align-items:center; gap:8px">
+                <div class="avatar" style="width:28px;height:28px;font-size:10px">${initials(v.nombre || 'V')}</div>
                 <div>
-                    <div style="font-size:12px;font-weight:600">${escapeHTML(v.nombre_completo)}</div>
+                    <div style="font-size:12px;font-weight:600;color:#fff">${escapeHTML(v.nombre)}</div>
                     <div style="font-size:11px;color:var(--txt-muted)">${escapeHTML(v.cargo)} · ${escapeHTML(v.consejo_nombre) || 'Sin consejo'}</div>
                 </div>
-                <span class="badge ${badgeClass(v.unidad)}" style="margin-left:auto">${escapeHTML(v.unidad)}</span>
             </div>
         `).join('');
     } catch {
-        results.innerHTML = '<span style="color:var(--txt-muted)">Servicio no disponible. Implementar /api/padron</span>';
+        results.innerHTML = '<span style="color:var(--txt-muted)">Error buscando voceros.</span>';
     }
 });
 
 async function quickReportUnidad(unidad) {
     try {
         const data = await apiFetch(`/api/padron/voceros?unidad=${encodeURIComponent(unidad)}`);
-        if (!data.length) { toast('info', `No hay voceros en la unidad ${unidad}`); return; }
+        if (!data || !data.length) { toast('info', `No hay voceros en la unidad ${unidad}`); return; }
         switchTab('padron');
         document.querySelectorAll('.unidad-btn').forEach(b => {
             b.classList.toggle('active', b.dataset.unidad === unidad);
         });
         renderVoceros(data);
     } catch {
-        toast('info', 'Servicio no disponible. Implementar /api/padron');
+        toast('info', 'Error al consultar la unidad en la base de datos.');
         switchTab('padron');
     }
 }
@@ -2103,7 +2817,7 @@ function renderConsejos(data) {
             <p>No hay consejos registrados aún.</p>
             <button class="btn btn-primary" style="margin:12px auto 0;display:flex" onclick="openModal('modal-consejo')">Registrar primero</button>
         </div>`;
-        lucide.createIcons();
+        if(window.lucide)lucide.createIcons();
         return;
     }
     grid.innerHTML = data.map(c => `
@@ -2135,12 +2849,16 @@ function populateConsejoSelect() { updateConsejoSelects(consejosCached); }
 async function loadVoceros(filtros = {}) {
     try {
         const params = new URLSearchParams();
-        if (filtros.unidad && filtros.unidad !== 'all') params.set('unidad', filtros.unidad);
         if (filtros.consejo_id) params.set('consejo_id', filtros.consejo_id);
         if (filtros.q) params.set('q', filtros.q);
         const data = await apiFetch(`/api/padron/voceros?${params}`);
         vocerosCachedFull = data;
-        renderVoceros(data);
+        // Filtro local por unidad (calculada a partir del cargo)
+        const unidad = filtros.unidad || activeUnidad;
+        const filtered = (unidad && unidad !== 'all')
+            ? data.filter(v => getUnidad(v.cargo) === unidad)
+            : data;
+        renderVoceros(filtered);
     } catch {
         renderVoceros([]);
     }
@@ -2150,28 +2868,36 @@ function renderVoceros(data) {
     const tbody = document.getElementById('voceros-tbody');
     document.getElementById('voceros-count').textContent = `${data.length} vocero${data.length !== 1 ? 's' : ''}`;
     if (!data.length) {
-        tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><i data-lucide="users"></i><p>No hay voceros para mostrar.</p></div></td></tr>`;
-        lucide.createIcons();
+        tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><i data-lucide="users"></i><p>No hay voceros para mostrar.</p></div></td></tr>`;
+        if(window.lucide)lucide.createIcons();
         return;
     }
-    tbody.innerHTML = data.map(v => `
+    tbody.innerHTML = data.map(v => {
+        const unidad = v.unidad || getUnidad(v.cargo);
+        return `
         <tr>
             <td>
                 <div class="td-name">
-                    <div class="avatar">${initials(v.nombre_completo)}</div>
+                    <div class="avatar">${initials(v.nombre || 'V')}</div>
                     <div>
-                        <div class="name-text">${escapeHTML(v.nombre_completo)}</div>
+                        <div class="name-text">${escapeHTML(v.nombre)}</div>
                         <div class="name-cedula">${escapeHTML(v.cedula) || '—'}</div>
                     </div>
                 </div>
             </td>
             <td>${escapeHTML(v.cargo)}</td>
-            <td><span class="badge ${badgeClass(v.unidad)}">${escapeHTML(v.unidad)}</span></td>
+            <td><span class="badge ${badgeClass(unidad)}">${escapeHTML(unidad)}</span></td>
             <td style="font-size:12px;color:var(--txt-muted)">${escapeHTML(v.consejo_nombre) || '—'}</td>
             <td style="font-size:12px">${escapeHTML(v.telefono) || '—'}</td>
             <td><span class="badge" style="${v.activo ? 'background:rgba(34,197,94,0.1);color:#22c55e' : 'background:rgba(239,68,68,0.1);color:#ef4444'}">${v.activo ? 'Activo' : 'Inactivo'}</span></td>
-        </tr>
-    `).join('');
+            <td style="text-align:right">
+                <button class="btn" style="padding:4px 8px;font-size:11px;gap:4px;opacity:0.8;" onclick="editVocero(${v.id})">
+                    <i data-lucide="pencil" style="width:12px;height:12px;"></i> Editar
+                </button>
+            </td>
+        </tr>`;
+    }).join('');
+    if(window.lucide)lucide.createIcons();
 }
 
 function filterByConsejo(id) {
@@ -2179,13 +2905,21 @@ function filterByConsejo(id) {
     loadVoceros({ consejo_id: id, unidad: activeUnidad });
 }
 
-// Filtros de unidad
+// Filtros de unidad - filtra sobre la caché sin recargar del servidor
 document.querySelectorAll('.unidad-btn[data-unidad]').forEach(btn => {
     btn.addEventListener('click', () => {
         document.querySelectorAll('.unidad-btn[data-unidad]').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         activeUnidad = btn.dataset.unidad;
-        loadVoceros({ unidad: activeUnidad });
+        // Si hay datos en caché, filtrar instantáneamente
+        if (vocerosCachedFull.length) {
+            const filtered = (activeUnidad && activeUnidad !== 'all')
+                ? vocerosCachedFull.filter(v => getUnidad(v.cargo) === activeUnidad)
+                : vocerosCachedFull;
+            renderVoceros(filtered);
+        } else {
+            loadVoceros({ unidad: activeUnidad });
+        }
     });
 });
 
@@ -2228,29 +2962,70 @@ document.getElementById('form-consejo').addEventListener('submit', async functio
     } finally { hideLoading(); }
 });
 
-// ─── Formulario: Nuevo Vocero ──────────────────────────────────────
+// ─── Formulario: Nuevo / Editar Vocero ─────────────────────────────
+let editingVoceroId = null;
+
+function openNewVoceroModal() {
+    editingVoceroId = null;
+    document.getElementById('modal-vocero-title').textContent = 'Registrar Nuevo Vocero';
+    document.getElementById('form-vocero').reset();
+    openModal('modal-vocero');
+}
+
+function editVocero(id) {
+    const v = vocerosCachedFull.find(x => x.id === id);
+    if (!v) { toast('error', 'No se encontró el vocero.'); return; }
+    editingVoceroId = id;
+    document.getElementById('modal-vocero-title').textContent = 'Editar Vocero';
+    document.getElementById('v-nombre').value   = v.nombre  || '';
+    document.getElementById('v-cedula').value   = v.cedula  || '';
+    document.getElementById('v-cargo').value    = v.cargo   || '';
+    document.getElementById('v-telefono').value = v.telefono || '';
+    // Detectar y seleccionar la unidad correcta
+    const unidad = v.unidad || getUnidad(v.cargo);
+    document.getElementById('v-unidad').value   = unidad;
+    openModal('modal-vocero');
+    // Pre-seleccionar consejo después de que openModal puebla el select
+    setTimeout(() => {
+        if (v.consejo_id) document.getElementById('v-consejo').value = v.consejo_id;
+    }, 50);
+}
+
 document.getElementById('form-vocero').addEventListener('submit', async function (e) {
     e.preventDefault();
-    showLoading('Registrando vocero...');
+    const isEdit = editingVoceroId !== null;
+    showLoading(isEdit ? 'Guardando cambios...' : 'Registrando vocero...');
     try {
-        await apiFetch('/api/padron/voceros', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                nombre_completo: document.getElementById('v-nombre').value,
-                cedula: document.getElementById('v-cedula').value,
-                cargo: document.getElementById('v-cargo').value,
-                unidad: document.getElementById('v-unidad').value,
-                consejo_comunal_id: document.getElementById('v-consejo').value,
-                telefono: document.getElementById('v-telefono').value,
-            })
-        });
-        toast('success', 'Vocero registrado correctamente.');
+        const payload = {
+            nombre:     document.getElementById('v-nombre').value,
+            cedula:     document.getElementById('v-cedula').value,
+            cargo:      document.getElementById('v-cargo').value,
+            unidad:     document.getElementById('v-unidad').value,
+            consejo_id: parseInt(document.getElementById('v-consejo').value) || null,
+            telefono:   document.getElementById('v-telefono').value,
+            email:      null,
+        };
+        if (isEdit) {
+            await apiFetch(`/api/padron/voceros/${editingVoceroId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            toast('success', 'Vocero actualizado correctamente.');
+        } else {
+            await apiFetch('/api/padron/voceros', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            toast('success', 'Vocero registrado correctamente.');
+        }
+        editingVoceroId = null;
         closeModal('modal-vocero');
         this.reset();
-        await loadVoceros({ unidad: activeUnidad });
+        await loadVoceros({ consejo_id: document.getElementById('vocero-filter-consejo').value || undefined });
     } catch (err) {
-        toast('error', err.message || 'Error al registrar vocero');
+        toast('error', err.message || 'Error al guardar el vocero');
     } finally { hideLoading(); }
 });
 
@@ -2268,14 +3043,14 @@ document.getElementById('form-search').addEventListener('submit', async function
     if (!q) return;
     const chat = document.getElementById('search-chat');
     chat.innerHTML += `<div class="message user-message"><div class="message-content"><p>${escapeHTML(q)}</p></div><div class="message-avatar"><i data-lucide="user" style="width:14px;height:14px"></i></div></div>`;
-    lucide.createIcons();
+    if(window.lucide)lucide.createIcons();
     document.getElementById('input-query').value = '';
     showLoading('Consultando documentos...');
     try {
         const r = await apiFetch('/api/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pregunta: q }) });
         const sources = r.fuentes?.length ? `<p style="margin-top:8px;font-size:11px;color:var(--txt-muted)">📄 ${r.fuentes.map(escapeHTML).join(', ')}</p>` : '';
         chat.innerHTML += `<div class="message"><div class="message-avatar">CPPO</div><div class="message-content"><p>${escapeHTML(r.respuesta)}</p>${sources}</div></div>`;
-        lucide.createIcons();
+        if(window.lucide)lucide.createIcons();
         chat.scrollTop = chat.scrollHeight;
     } catch (err) { toast('error', err.message); } finally { hideLoading(); }
 });
@@ -2289,13 +3064,13 @@ document.getElementById('form-agent').addEventListener('submit', async function 
 
     // Mensaje del usuario
     chat.innerHTML += `<div class="message user-message"><div class="message-content"><p>${q.replace(/</g,'&lt;')}</p></div><div class="message-avatar"><i data-lucide="user" style="width:14px;height:14px"></i></div></div>`;
-    lucide.createIcons();
+    if(window.lucide)lucide.createIcons();
     document.getElementById('input-agent').value = '';
 
     // Loader
     const loaderId = 'loader-' + Date.now();
     chat.innerHTML += `<div class="message" id="${loaderId}"><div class="message-avatar">AG</div><div class="message-content"><p><i data-lucide="loader" class="animate-spin" style="display:inline-block;vertical-align:middle;margin-right:6px"></i>Consultando expedientes...</p></div></div>`;
-    lucide.createIcons();
+    if(window.lucide)lucide.createIcons();
     chat.scrollTop = chat.scrollHeight;
 
     showLoading('El agente está buscando en los expedientes...');
@@ -2345,13 +3120,13 @@ document.getElementById('form-agent').addEventListener('submit', async function 
 
         html += `</div></div>`;
         chat.innerHTML += html;
-        lucide.createIcons();
+        if(window.lucide)lucide.createIcons();
         chat.scrollTop = chat.scrollHeight;
     } catch (err) {
         const loaderEl = document.getElementById(loaderId);
         if (loaderEl) loaderEl.remove();
         chat.innerHTML += `<div class="message"><div class="message-avatar">AG</div><div class="message-content"><p style="color:var(--red)">Error: ${escapeHTML(err.message)}</p></div></div>`;
-        lucide.createIcons();
+        if(window.lucide)lucide.createIcons();
         chat.scrollTop = chat.scrollHeight;
     } finally { hideLoading(); }
 });
@@ -2376,13 +3151,13 @@ document.getElementById('form-universal').addEventListener('submit', async funct
     if (!q) return;
     const chat = document.getElementById('chat-universal');
     chat.innerHTML += `<div class="message user-message"><div class="message-content"><p>${escapeHTML(q)}</p></div><div class="message-avatar"><i data-lucide="user" style="width:14px;height:14px"></i></div></div>`;
-    lucide.createIcons();
+    if(window.lucide)lucide.createIcons();
     document.getElementById('input-universal').value = '';
     chat.scrollTop = chat.scrollHeight;
 
     const loaderId = 'uloader-' + Date.now();
     chat.innerHTML += `<div class="message" id="${loaderId}"><div class="message-avatar">IA</div><div class="message-content"><p><i data-lucide="loader" class="animate-spin" style="display:inline-block;vertical-align:middle;margin-right:6px"></i> Buscando en todas las fuentes...</p></div></div>`;
-    lucide.createIcons();
+    if(window.lucide)lucide.createIcons();
     chat.scrollTop = chat.scrollHeight;
 
     try {
@@ -2406,7 +3181,7 @@ document.getElementById('form-universal').addEventListener('submit', async funct
         if (loaderEl) loaderEl.remove();
         chat.innerHTML += `<div class="message"><div class="message-avatar">IA</div><div class="message-content"><p style="color:var(--red)">Error: ${escapeHTML(err.message)}</p></div></div>`;
     }
-    lucide.createIcons();
+    if(window.lucide)lucide.createIcons();
     chat.scrollTop = chat.scrollHeight;
 });
 
@@ -2448,7 +3223,7 @@ function renderLettersList(data) {
                 ${pdfFn ? `<button onclick="window.open('/cartas/${pdfEncoded}','_blank')" class="btn btn-sm" style="font-size:10px;padding:3px 8px"><i data-lucide="printer" style="width:11px;height:11px"></i> Imprimir</button>` : ''}
             </div>
         </div>`}).join('');
-    lucide.createIcons();
+    if(window.lucide)lucide.createIcons();
 }
 
 // Búsqueda de voceros para firma
@@ -2586,7 +3361,7 @@ async function loadActivities() {
                 </div>
             </div>`;
         }).join('');
-        lucide.createIcons();
+        if(window.lucide)lucide.createIcons();
     } catch {}
 }
 
@@ -2600,7 +3375,7 @@ function editActivity(id, fecha, categoria, descripcion, participantes) {
     // Cambiar texto del botón
     const btn = document.querySelector('#form-activity button[type="submit"]');
     btn.innerHTML = `<i data-lucide="save"></i><span>Guardar Cambios</span>`;
-    lucide.createIcons();
+    if(window.lucide)lucide.createIcons();
     
     // Hacer scroll al formulario
     document.getElementById('form-activity').scrollIntoView({ behavior: 'smooth' });
@@ -2651,7 +3426,7 @@ document.getElementById('form-activity').addEventListener('submit', async functi
             toast('error', err.message);
         } finally {
             hideLoading();
-            lucide.createIcons();
+            if(window.lucide)lucide.createIcons();
         }
     } else {
         // Modo Registro (POST)
@@ -2700,7 +3475,7 @@ document.querySelectorAll('.btn-report').forEach(btn => {
                 <div class="item-meta">${r.total_actividades} actividades · ${r.total_participantes} participantes</div>
                 ${openLink}
             </div>` + c.innerHTML;
-            lucide.createIcons();
+            if(window.lucide)lucide.createIcons();
             toast('success', `Informe ${r.tipo} generado.`);
         } catch (err) { toast('error', err.message); } finally { hideLoading(); }
     });
@@ -2714,15 +3489,17 @@ async function loadTasks() {
         const pending = data.filter(t => !t.completada);
         document.getElementById('badge-tasks').textContent = pending.length;
         if (!data.length) { c.innerHTML = '<div class="empty-state">Sin tareas agendadas.</div>'; return; }
-        c.innerHTML = data.slice(0, 20).map(t => `
+        c.innerHTML = data.slice(0, 20).map(t => {
+            const cl = t.completada ? 'completed' : (new Date(t.fecha_limite) < new Date() ? 'overdue' : '');
+            return `
             <div class="list-item">
                 <div style="display:flex;align-items:center;justify-content:space-between">
                     <div class="item-title" style="${t.completada ? 'text-decoration:line-through;color:var(--txt-muted)' : ''}">${escapeHTML(t.titulo)}</div>
                     ${!t.completada ? `<button onclick="completeTask(${t.id})" class="btn" style="font-size:10px;padding:3px 8px"><i data-lucide="check" style="width:11px;height:11px"></i> Hecho</button>` : ''}
                 </div>
                 <div class="item-meta">${escapeHTML(t.fecha_limite)}</div>
-            </div>`).join('');
-        lucide.createIcons();
+            </div>`; }).join('');
+        if(window.lucide)lucide.createIcons();
     } catch {}
 }
 
@@ -2743,6 +3520,8 @@ document.getElementById('form-task').addEventListener('submit', async function (
             body: JSON.stringify({
                 titulo: document.getElementById('task-title').value,
                 descripcion: document.getElementById('task-desc').value,
+                responsable: document.getElementById('task-responsable').value || null,
+                consejo_id: document.getElementById('task-consejo').value ? parseInt(document.getElementById('task-consejo').value) : null,
                 fecha_limite: document.getElementById('task-date').value.replace('T', ' '),
                 recordatorio_dias: parseInt(document.getElementById('task-reminder').value) || 1,
             })
@@ -2769,7 +3548,7 @@ async function loadConsultas() {
         const list = document.getElementById('consultas-list');
         if (!data.length) {
             list.innerHTML = `<div class="empty-state"><i data-lucide="clipboard-list"></i><p>No hay consultas registradas aún.</p></div>`;
-            lucide.createIcons();
+            if(window.lucide)lucide.createIcons();
             return;
         }
         
@@ -2782,7 +3561,7 @@ async function loadConsultas() {
                 <button class="btn" onclick="toast('info', 'Resultados en desarrollo')">Resultados</button>
             </div>
         `).join('');
-        lucide.createIcons();
+        if(window.lucide)lucide.createIcons();
     } catch (e) {
         document.getElementById('consultas-list').innerHTML = `<div class="empty-state">Error cargando consultas</div>`;
     }
@@ -2885,7 +3664,7 @@ document.getElementById('form-acta-upload').addEventListener('submit', async fun
         document.getElementById('btn-acta-save').style.display = d.ya_existe ? 'none' : 'inline-flex';
         document.getElementById('btn-acta-otra').style.display = 'inline-flex';
         document.getElementById('acta-preview-container').style.display = 'block';
-        lucide.createIcons();
+        if(window.lucide)lucide.createIcons();
         toast('success', `PDF procesado: ${d.voceros.length} voceros encontrados`);
     } catch (err) {
         toast('error', err.message);
@@ -2947,6 +3726,331 @@ async function loadActasList() {
 loadDashboard();
 loadTasks();
 loadLetterTypes();
+</script>
+
+    <!-- ═══ MODALES DE AUTOGOBIERNO COMUNAL ════════════════════════════════════ -->
+
+    <!-- Modal Asignar Vocero a Instancia -->
+    <div id="modal-asignar-instancia" class="modal-backdrop">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 id="modal-asig-instancia-titulo">Asignar Vocero a Instancia</h3>
+                <button class="modal-close" onclick="closeModal('modal-asignar-instancia')">&times;</button>
+            </div>
+            <form id="form-asignar-instancia" onsubmit="guardarAsignacionInstancia(event)">
+                <input type="hidden" id="asig-instancia-id">
+                <div class="form-group">
+                    <label>Seleccionar Vocero del Padrón *</label>
+                    <select id="asig-instancia-vocero" class="input" required></select>
+                </div>
+                <div class="form-group">
+                    <label>Cargo en la Instancia *</label>
+                    <input type="text" id="asig-instancia-cargo" class="input" placeholder="Ej. Vocero Principal / Suplente / Coordinador" required>
+                </div>
+                <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px">
+                    <button type="button" class="btn" onclick="closeModal('modal-asignar-instancia')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Asignar a Instancia</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Asignar Vocero a Comisión -->
+    <div id="modal-asignar-comision" class="modal-backdrop">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 id="modal-asig-comision-titulo">Asignar Vocero a Comisión</h3>
+                <button class="modal-close" onclick="closeModal('modal-asignar-comision')">&times;</button>
+            </div>
+            <form id="form-asignar-comision" onsubmit="guardarAsignacionComision(event)">
+                <input type="hidden" id="asig-comision-id">
+                <div class="form-group">
+                    <label>Seleccionar Vocero del Padrón *</label>
+                    <select id="asig-comision-vocero" class="input" required></select>
+                </div>
+                <div class="form-group">
+                    <label>Rol o Responsabilidad en Comisión</label>
+                    <input type="text" id="asig-comision-cargo" class="input" placeholder="Ej. Responsable / Miembro de Equipo">
+                </div>
+                <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px">
+                    <button type="button" class="btn" onclick="closeModal('modal-asignar-comision')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Asignar a Comisión</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Nueva Familia Censo -->
+    <div id="modal-nueva-familia" class="modal-backdrop">
+        <div class="modal-box" style="max-width:540px">
+            <div class="modal-header">
+                <h3>Censar Nueva Familia</h3>
+                <button class="modal-close" onclick="closeModal('modal-nueva-familia')">&times;</button>
+            </div>
+            <form id="form-nueva-familia" onsubmit="guardarNuevaFamilia(event)">
+                <div class="form-group">
+                    <label>Consejo Comunal *</label>
+                    <select id="censo-modal-consejo" class="input" required></select>
+                </div>
+                <div class="form-group">
+                    <label>Jefe(a) de Familia (Nombres y Apellidos) *</label>
+                    <input type="text" id="fam-input-jefe" class="input" placeholder="Ej. Carmen Rodríguez" required>
+                </div>
+                <div class="form-row" style="display:flex;gap:10px">
+                    <div class="form-group" style="flex:1">
+                        <label>Cédula de Identidad *</label>
+                        <input type="text" id="fam-input-cedula" class="input" placeholder="V-12345678" required>
+                    </div>
+                    <div class="form-group" style="flex:1">
+                        <label>Teléfono de Contacto</label>
+                        <input type="text" id="fam-input-telefono" class="input" placeholder="0412-0000000">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Dirección / Número de Casa *</label>
+                    <input type="text" id="fam-input-direccion" class="input" placeholder="Sector 1, Calle 3, Casa #15" required>
+                </div>
+                <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px">
+                    <button type="button" class="btn" onclick="closeModal('modal-nueva-familia')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Registrar Núcleo Familiar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Detalle Familia Censo -->
+    <div id="modal-detalle-familia" class="modal-backdrop">
+        <div class="modal-box" style="max-width:680px">
+            <div class="modal-header">
+                <h3>Expediente Familiar: <span id="fam-det-codigo" style="color:var(--accent)"></span></h3>
+                <button class="modal-close" onclick="closeModal('modal-detalle-familia')">&times;</button>
+            </div>
+            <div style="padding:16px">
+                <div style="background:var(--bg-card-2);padding:14px;border-radius:8px;margin-bottom:16px">
+                    <h4 id="fam-det-jefe" style="font-size:15px;margin-bottom:4px;color:var(--txt)"></h4>
+                    <p style="font-size:12px;color:var(--txt-muted)">
+                        <strong>C.I:</strong> <span id="fam-det-cedula"></span> | 
+                        <strong>Consejo:</strong> <span id="fam-det-consejo"></span> | 
+                        <strong>Tel:</strong> <span id="fam-det-telefono"></span>
+                    </p>
+                    <p style="font-size:12px;color:var(--txt-muted);margin-top:4px">
+                        <strong>Dirección:</strong> <span id="fam-det-direccion"></span>
+                    </p>
+                </div>
+
+                <h4 style="font-size:13px;font-weight:600;margin-bottom:8px">Integrantes del Núcleo Familiar</h4>
+                <div id="fam-det-miembros" style="margin-bottom:16px"></div>
+
+                <h4 style="font-size:13px;font-weight:600;margin-bottom:8px">Condiciones de Vivienda y Servicios</h4>
+                <div id="fam-det-vivienda"></div>
+            </div>
+            <div class="modal-footer" style="display:flex;justify-content:flex-end;padding:12px 16px;border-top:1px solid var(--border)">
+                <button type="button" class="btn" onclick="closeModal('modal-detalle-familia')">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Nuevo Elector Censo -->
+    <div id="modal-nuevo-elector" class="modal-backdrop">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>Registrar Elector en Padrón Comunal</h3>
+                <button class="modal-close" onclick="closeModal('modal-nuevo-elector')">&times;</button>
+            </div>
+            <form id="form-nuevo-elector" onsubmit="guardarNuevoElector(event)">
+                <div class="form-group">
+                    <label>Consejo Comunal *</label>
+                    <select id="elector-modal-consejo" class="input" required></select>
+                </div>
+                <div class="form-group">
+                    <label>Nombre y Apellidos *</label>
+                    <input type="text" id="elector-input-nombre" class="input" placeholder="Ej. Roberto Martínez" required>
+                </div>
+                <div class="form-group">
+                    <label>Cédula de Identidad *</label>
+                    <input type="text" id="elector-input-cedula" class="input" placeholder="V-19876543" required>
+                </div>
+                <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px">
+                    <button type="button" class="btn" onclick="closeModal('modal-nuevo-elector')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Registrar Elector</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Nueva Rendición de Cuentas -->
+    <div id="modal-nueva-rendicion" class="modal-backdrop">
+        <div class="modal-box" style="max-width:540px">
+            <div class="modal-header">
+                <h3>Asentar Rendición Anual de Cuentas</h3>
+                <button class="modal-close" onclick="closeModal('modal-nueva-rendicion')">&times;</button>
+            </div>
+            <form id="form-nueva-rendicion" onsubmit="guardarNuevaRendicion(event)">
+                <div class="form-row" style="display:flex;gap:10px">
+                    <div class="form-group" style="flex:1">
+                        <label>Período / Ejercicio Fiscal *</label>
+                        <input type="text" id="rend-input-periodo" class="input" placeholder="Ej. 2025 o 2026-I" required>
+                    </div>
+                    <div class="form-group" style="flex:1">
+                        <label>Instancia u Órgano Responsable</label>
+                        <select id="rend-modal-instancia" class="input"></select>
+                    </div>
+                </div>
+                <div class="form-row" style="display:flex;gap:10px">
+                    <div class="form-group" style="flex:1">
+                        <label>Presupuesto Asignado (Bs.)</label>
+                        <input type="number" step="0.01" id="rend-input-asignado" class="input" placeholder="0.00">
+                    </div>
+                    <div class="form-group" style="flex:1">
+                        <label>Presupuesto Ejecutado (Bs.)</label>
+                        <input type="number" step="0.01" id="rend-input-ejecutado" class="input" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Memoria Descriptiva de Logros y Actividades *</label>
+                    <textarea id="rend-input-logros" class="input" rows="4" placeholder="Detalle las metas alcanzadas y destino de los recursos comunales..." required></textarea>
+                </div>
+                <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px">
+                    <button type="button" class="btn" onclick="closeModal('modal-nueva-rendicion')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Asentar Rendición</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Nueva Decisión Gaceta Comunal -->
+    <div id="modal-nueva-gaceta" class="modal-backdrop">
+        <div class="modal-box" style="max-width:560px">
+            <div class="modal-header">
+                <h3>Promulgar Decisión en Gaceta Comunal</h3>
+                <button class="modal-close" onclick="closeModal('modal-nueva-gaceta')">&times;</button>
+            </div>
+            <form id="form-nueva-gaceta" onsubmit="guardarNuevaGaceta(event)">
+                <div class="form-row" style="display:flex;gap:10px">
+                    <div class="form-group" style="flex:1">
+                        <label>Número Correlativo Oficial</label>
+                        <input type="text" id="gaceta-input-numero" class="input" placeholder="GC-CPPO-2026-0001 (Automático)">
+                    </div>
+                    <div class="form-group" style="flex:1">
+                        <label>Tipo de Decisión *</label>
+                        <select id="gaceta-input-tipo" class="input" required>
+                            <option value="Acuerdo">Acuerdo Comunal</option>
+                            <option value="Ley Comunal">Ley Comunal</option>
+                            <option value="Resolución">Resolución Comunal</option>
+                            <option value="Decreto">Decreto del Parlamento</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Sesión del Parlamento Comunal</label>
+                    <input type="text" id="gaceta-input-sesion" class="input" placeholder="Ej. Sesión Ordinaria N° 14 - Acta 02/2026">
+                </div>
+                <div class="form-group">
+                    <label>Título de la Decisión *</label>
+                    <input type="text" id="gaceta-input-titulo" class="input" placeholder="Ej. Aprobación del Plan de Siembra Comunal 2026" required>
+                </div>
+                <div class="form-group">
+                    <label>Texto Completo y Considerandos *</label>
+                    <textarea id="gaceta-input-contenido" class="input" rows="6" placeholder="El Parlamento Comunal de la Comuna Productiva Presidente Obrero, en uso de sus atribuciones legales..." required></textarea>
+                </div>
+                <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px">
+                    <button type="button" class="btn" onclick="closeModal('modal-nueva-gaceta')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Promulgar y Publicar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Nuevo Proyecto ACA (Matriz 7T) -->
+    <div id="modal-nuevo-proyecto" class="modal-backdrop">
+        <div class="modal-box" style="max-width:620px">
+            <div class="modal-header">
+                <h3>Registrar Acción / Proyecto ACA (Plan de la Patria Comunal)</h3>
+                <button class="modal-close" onclick="closeModal('modal-nuevo-proyecto')">&times;</button>
+            </div>
+            <form id="form-nuevo-proyecto" onsubmit="guardarNuevoProyecto(event)">
+                <div class="form-row" style="display:flex;gap:10px">
+                    <div class="form-group" style="flex:1.2">
+                        <label>Eje de Transformación (7T) *</label>
+                        <select id="proy-input-7t" class="input">
+                            <option value="1T. Transformación Económica">1T. Transformación Económica</option>
+                            <option value="2T. Servicios Públicos e Infraestructura" selected>2T. Servicios Públicos e Infraestructura</option>
+                            <option value="3T. Seguridad y Defensa">3T. Seguridad y Defensa</option>
+                            <option value="4T. Transformación Social">4T. Transformación Social</option>
+                            <option value="5T. Transformación Política y Poder Popular">5T. Transformación Política y Poder Popular</option>
+                            <option value="6T. Ecosocialismo, Ciencia y Tecnología">6T. Ecosocialismo, Ciencia y Tecnología</option>
+                            <option value="7T. Geopolítica y Paz">7T. Geopolítica y Paz</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex:1">
+                        <label>Tiempo de Ejecución</label>
+                        <select id="proy-input-plazo" class="input">
+                            <option value="Corto Plazo" selected>Corto Plazo</option>
+                            <option value="Mediano Plazo">Mediano Plazo</option>
+                            <option value="Largo Plazo">Largo Plazo</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Acción u Obra a Ejecutar *</label>
+                    <input type="text" id="proy-input-nombre" class="input" placeholder="Ej. Reemplazo del transformador eléctrico de 50 KVA" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Problema o Nudo Crítico Diagnosticado</label>
+                    <textarea id="proy-input-nudo" class="input" rows="2" placeholder="Describa el nudo crítico que afecta a la comunidad..."></textarea>
+                </div>
+
+                <div class="form-row" style="display:flex;gap:10px">
+                    <div class="form-group" style="flex:1">
+                        <label>Potencialidades para la Solución</label>
+                        <input type="text" id="proy-input-potencial" class="input" placeholder="Ej. Mano de obra comunal calificada">
+                    </div>
+                    <div class="form-group" style="flex:1">
+                        <label>Requerimientos y Materiales</label>
+                        <input type="text" id="proy-input-requerimiento" class="input" placeholder="Ej. 1 Transformador, cables, conectores">
+                    </div>
+                </div>
+
+                <div class="form-row" style="display:flex;gap:10px">
+                    <div class="form-group" style="flex:1">
+                        <label>Comisión de Gestión Vinculada</label>
+                        <select id="proy-modal-comision" class="input"></select>
+                    </div>
+                    <div class="form-group" style="flex:1">
+                        <label>Monto Estimado de Inversión (Bs.)</label>
+                        <input type="number" step="0.01" id="proy-input-monto" class="input" placeholder="0.00">
+                    </div>
+                    <div class="form-group" style="flex:1">
+                        <label>Beneficiarios</label>
+                        <input type="number" id="proy-input-beneficiarios" class="input" placeholder="Familias">
+                    </div>
+                </div>
+
+                <div class="form-group" style="display:none">
+                    <textarea id="proy-input-desc"></textarea>
+                </div>
+
+                <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px">
+                    <button type="button" class="btn" onclick="closeModal('modal-nuevo-proyecto')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar en Agenda ACA</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+<script src="comuna_modules.js"></script>
+<script>
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').then(reg => {
+            console.log('PWA ServiceWorker activo:', reg.scope);
+        }).catch(err => {
+            console.log('ServiceWorker no disponible:', err);
+        });
+    });
+}
 </script>
 </body>
 </html>

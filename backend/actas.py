@@ -32,7 +32,7 @@ async def upload_acta(file: UploadFile = File(...)):
 
     # Extraer datos
     try:
-        datos = extraer_datos_acta(pdf_path)
+        datos = await extraer_datos_acta(pdf_path)
     except Exception as e:
         # Limpiar archivo si falla la extracción
         pdf_path.unlink(missing_ok=True)
@@ -87,7 +87,7 @@ async def save_acta(acta_id: int):
     if not pdf_path or not Path(pdf_path).exists():
         raise HTTPException(status_code=404, detail="Archivo PDF del acta no encontrado")
 
-    datos = extraer_datos_acta(pdf_path)
+    datos = await extraer_datos_acta(pdf_path)
 
     async with await get_db() as db:
         # Buscar o crear consejo comunal
@@ -162,14 +162,34 @@ async def save_acta(acta_id: int):
     }
 
 @router.get("")
-async def list_actas():
+async def list_actas(page: int = 1, limit: int = 50, q: Optional[str] = None):
     """Lista todas las actas registradas."""
+    import math
     async with await get_db() as db:
+        offset = (page - 1) * limit
+        params = []
+        where_sql = "1=1"
+        
+        if q:
+            where_sql = "(nombre_consejo LIKE ? OR sector LIKE ? OR codigo_registro LIKE ?)"
+            params.extend([f"%{q}%", f"%{q}%", f"%{q}%"])
+            
+        count_cursor = await db.execute(f"SELECT COUNT(*) FROM actas WHERE {where_sql}", params)
+        total = (await count_cursor.fetchone())[0]
+        
+        params.extend([limit, offset])
         cursor = await db.execute(
-            "SELECT * FROM actas ORDER BY created_at DESC"
+            f"SELECT * FROM actas WHERE {where_sql} ORDER BY created_at DESC LIMIT ? OFFSET ?",
+            params
         )
         rows = await cursor.fetchall()
-        return [dict(r) for r in rows]
+        
+        return {
+            "items": [dict(r) for r in rows],
+            "total": total,
+            "page": page,
+            "pages": math.ceil(total / limit) if limit > 0 else 1
+        }
 
 @router.get("/{acta_id}")
 async def get_acta(acta_id: int):

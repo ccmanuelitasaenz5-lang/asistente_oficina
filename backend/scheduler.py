@@ -1,8 +1,10 @@
 import asyncio
 import logging
 from datetime import datetime, date, timedelta
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 logger = logging.getLogger("scheduler")
+scheduler = AsyncIOScheduler()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -214,37 +216,28 @@ async def _chequeo_silencioso():
 # ─────────────────────────────────────────────────────────────────────────────
 
 async def iniciar_scheduler():
-    logger.info("Scheduler de notificaciones iniciado.")
-    ejecutadas_hoy: dict = {}
-
-    while True:
-        try:
-            ahora = datetime.now()
-            hoy_str = ahora.strftime("%Y-%m-%d")
-            hora = ahora.hour
-            minuto = ahora.minute
-
-            if ejecutadas_hoy.get("fecha") != hoy_str:
-                ejecutadas_hoy = {"fecha": hoy_str}
-
-            if hora == 8 and minuto < 5 and not ejecutadas_hoy.get("matutina"):
-                ejecutadas_hoy["matutina"] = True
-                await _notificacion_matutina()
-
-            if hora == 9 and minuto < 5 and not ejecutadas_hoy.get("alerta"):
-                ejecutadas_hoy["alerta"] = True
-                await _alerta_vencimientos()
-
-            if hora == 18 and minuto < 5 and not ejecutadas_hoy.get("vespertino"):
-                ejecutadas_hoy["vespertino"] = True
-                await _resumen_vespertino()
-
-            hora_key = f"chequeo_{hora}"
-            if minuto < 5 and not ejecutadas_hoy.get(hora_key):
-                ejecutadas_hoy[hora_key] = True
-                await _chequeo_silencioso()
-
-        except Exception as e:
-            logger.error(f"Error en scheduler: {e}")
-
-        await asyncio.sleep(60)
+    logger.info("Iniciando APScheduler de notificaciones.")
+    
+    # Notificación matutina a las 8:00 AM
+    scheduler.add_job(_notificacion_matutina, 'cron', hour=8, minute=0)
+    
+    # Alerta de vencimientos a las 9:00 AM
+    scheduler.add_job(_alerta_vencimientos, 'cron', hour=9, minute=0)
+    
+    # Resumen vespertino a las 6:00 PM (18:00)
+    scheduler.add_job(_resumen_vespertino, 'cron', hour=18, minute=0)
+    
+    # Chequeo silencioso cada hora, en el minuto 0
+    scheduler.add_job(_chequeo_silencioso, 'cron', minute=0)
+    
+    # Keepalive Supabase (cada 3 días) para evitar pausa del Free Tier
+    try:
+        from backend.supabase_sync import ping_supabase_keepalive
+        scheduler.add_job(ping_supabase_keepalive, 'cron', day='*/3', hour=12, minute=0)
+    except Exception as e:
+        logger.warning(f"No se pudo programar keepalive de Supabase: {e}")
+    
+    try:
+        scheduler.start()
+    except Exception as e:
+        logger.error(f"Error iniciando APScheduler: {e}")

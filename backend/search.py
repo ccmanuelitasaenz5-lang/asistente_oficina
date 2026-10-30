@@ -4,7 +4,7 @@ from backend.indexer import collection
 from backend.database import get_db
 from backend.ai_router import generar_texto
 
-logging.basicConfig(level=logging.INFO)
+
 logger = logging.getLogger("search")
 
 async def buscar_documentos_fts(query: str, top_k: int = 5) -> List[dict]:

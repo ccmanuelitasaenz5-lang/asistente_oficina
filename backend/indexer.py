@@ -12,7 +12,7 @@ import pytesseract
 from backend.config import DOCUMENTOS_PATH, CHROMA_PATH, IDIOMA, TESSERACT_LANG, COHERE_API_KEY, GEMINI_API_KEY
 from backend.database import get_db
 
-logging.basicConfig(level=logging.INFO)
+
 logger = logging.getLogger("indexer")
 
 # Intentar inicializar LanceDB

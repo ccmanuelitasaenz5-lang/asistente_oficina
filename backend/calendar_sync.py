@@ -9,7 +9,7 @@ from googleapiclient.discovery import build
 from backend.config import GOOGLE_CREDENTIALS_FILE, BASE_DIR
 from backend.database import get_db
 
-logging.basicConfig(level=logging.INFO)
+
 logger = logging.getLogger("calendar_sync")
 
 # Alcances de la API de Google Calendar
@@ -50,13 +50,16 @@ def obtener_servicio_calendario():
             try:
                 # Flujo local para obtener autorización
                 flow = InstalledAppFlow.from_client_secrets_file(str(creds_path), SCOPES)
-                # Ejecutar servidor local para autenticar. 
-                # Nota: En producción/uso real, el usuario debe abrir el enlace de autorización en su navegador.
-                # Para evitar bloquear el backend, permitimos ejecutar esto asincrónicamente o indicamos al usuario cómo hacerlo.
-                creds = flow.run_local_server(port=0, open_browser=False)
-                # Guardar las credenciales para la próxima ejecución
-                with open(token_path, 'w') as token:
-                    token.write(creds.to_json())
+                # NOTA: run_local_server bloquea hasta que el usuario autorice.
+                # Si la app de Google Cloud no está verificada, el usuario recibirá
+                # un error 403 y este flujo se quedará colgado.
+                # Por seguridad, no ejecutamos esto automáticamente en segundo plano.
+                logger.warning(
+                    "Google Calendar requiere autorización manual. "
+                    "Ejecute el script de autenticación por separado o agregue su email "
+                    "como usuario de prueba en Google Cloud Console."
+                )
+                return None
             except Exception as e:
                 logger.error(f"Fallo al autenticar flujo de Google Calendar OAuth: {e}")
                 return None

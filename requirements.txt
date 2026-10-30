@@ -4,7 +4,7 @@ fastapi
 uvicorn[standard]
 python-multipart
 python-dotenv
-pydantic==2.11.3
+pydantic==2.12.0
 
 # Base de datos
 aiosqlite==0.21.0
@@ -15,8 +15,8 @@ pdfplumber==0.11.6
 python-docx==1.1.2
 openpyxl==3.1.5
 xlrd>=2.0.1
-pandas==2.3.0
-Pillow==11.2.1
+pandas==2.3.3
+Pillow==11.3.0
 
 # OCR
 pytesseract==0.3.13
@@ -43,8 +43,13 @@ APScheduler==3.10.4
 
 # Generación de informes (WeasyPrint desactivado — requiere GTK en Windows)
 # WeasyPrint==65.0
-matplotlib==3.10.3
+xhtml2pdf==0.2.16
+matplotlib==3.10.5
 
 # Utilidades
 httpx==0.28.1
+
+# Nube y PWA (Opcional para sincronización con Supabase Cloud)
+# supabase
+
 aiofiles==24.1.0
