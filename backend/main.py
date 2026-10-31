@@ -1,5 +1,7 @@
 import logging
 import hmac
+import posixpath
+import re
 import os
 import asyncio
 from contextlib import asynccontextmanager
@@ -114,14 +116,22 @@ app.add_middleware(
 # Auth opcional: si API_KEY está definida en .env, protege todas las rutas /api/*
 @app.middleware("http")
 async def auth_middleware(request: Request, call_next):
-    # Rutas protegidas si API_KEY está configurada en .env
-    path = request.url.path
+    # Normalizar ruta para evitar bypass con barras dobles (//), /./, etc.
+    raw_path = request.url.path
+    collapsed_path = re.sub(r"/+", "/", raw_path)
+    norm_path = posixpath.normpath(collapsed_path)
+    
     necesita_auth = False
     
     if API_KEY:
-        if path.startswith("/api/") and path != "/api/status":
+        if norm_path.startswith("/api/") and norm_path != "/api/status":
             necesita_auth = True
-        elif path.startswith("/cartas") or path.startswith("/informes") or path.startswith("/media/actas"):
+        elif (
+            norm_path.startswith("/cartas")
+            or norm_path.startswith("/informes")
+            or norm_path.startswith("/media/actas")
+            or "/actas/" in norm_path
+        ):
             necesita_auth = True
             
     if necesita_auth:
@@ -310,7 +320,8 @@ async def post_activity(act: NuevaActividad):
             fotos=act.fotos
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error registrando actividad: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error interno al registrar la actividad")
 
 @app.delete("/api/activities/{act_id}")
 async def delete_activity(act_id: int):
@@ -426,7 +437,8 @@ async def api_exportar_padron_excel():
             },
         )
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        logger.warning(f"Exportación Excel sin datos: {e}")
+        raise HTTPException(status_code=404, detail="No se encontraron datos para exportar el padrón")
     except ImportError:
         raise HTTPException(status_code=500, detail="Instala openpyxl: pip install openpyxl")
     except Exception as e:

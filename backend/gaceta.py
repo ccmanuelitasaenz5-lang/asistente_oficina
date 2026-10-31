@@ -267,5 +267,5 @@ async def generar_pdf_gaceta(gaceta_id: int):
         }
     except Exception as e:
         logger.error(f"Error generando PDF de gaceta: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error interno al generar el PDF de la Gaceta Comunal")
 

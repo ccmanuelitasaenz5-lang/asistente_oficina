@@ -8,18 +8,21 @@ if (-not (Test-Path "venv\Scripts\python.exe")) {
     & "venv\Scripts\pip.exe" install -r requirements.txt
 }
 
-# Matar proceso previo en puerto 8000 si existe
-$process = netstat -ano | Select-String ":8000 " | Select-String "LISTENING"
+$host_addr = if ($env:SERVER_HOST) { $env:SERVER_HOST } else { "127.0.0.1" }
+$port = if ($env:SERVER_PORT) { $env:SERVER_PORT } else { "8000" }
+
+# Matar proceso previo en puerto especificado si existe
+$process = netstat -ano | Select-String ":$port " | Select-String "LISTENING"
 if ($process) {
-    $pid = $process.Line -replace '.*\s+(\d+)\s*$', '$1'
-    taskkill /F /PID $pid 2>$null
+    $pid_num = $process.Line -replace '.*\s+(\d+)\s*$', '$1'
+    taskkill /F /PID $pid_num 2>$null
     Start-Sleep -Seconds 1
 }
 
 # Abrir navegador
-Start-Process "http://localhost:8000/"
+Start-Process "http://$host_addr`:$port/"
 
-Write-Host "Servidor en http://localhost:8000/ - Presiona Ctrl+C para detener" -ForegroundColor Cyan
-& "venv\Scripts\python.exe" -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
+Write-Host "Servidor en http://$host_addr`:$port/ - Presiona Ctrl+C para detener" -ForegroundColor Cyan
+& "venv\Scripts\python.exe" -m uvicorn backend.main:app --host $host_addr --port $port
 
 Read-Host "Servidor detenido. Presiona Enter para salir"

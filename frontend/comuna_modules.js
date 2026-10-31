@@ -875,7 +875,11 @@ async function descargarPdfGaceta(gacetaId) {
     try {
         const res = await apiFetch(`/api/gaceta/${gacetaId}/pdf`);
         toast('success', 'PDF oficial generado exitosamente');
-        window.open(res.pdf_url, '_blank');
+        if (window.abrirArchivoAutenticado) {
+            window.abrirArchivoAutenticado(res.pdf_url);
+        } else {
+            window.open(res.pdf_url, '_blank');
+        }
     } catch (err) {
         toast('error', err.message);
     } finally {

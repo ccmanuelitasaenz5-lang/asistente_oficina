@@ -1,4 +1,4 @@
-﻿# 🏘️ Asistente Comunal — Comuna Productiva Presidente Obrero
+# 🏘️ Asistente Comunal — Comuna Productiva Presidente Obrero
 
 > Sistema integral de gestión comunal con inteligencia artificial, bot de Telegram, generación de documentos y sincronización con Google Calendar.
 
@@ -164,7 +164,7 @@ ZHIPU_API_KEY=...
 
 # === Telegram Bot ===
 TELEGRAM_BOT_TOKEN=123456789:AAF...
-TELEGRAM_CHAT_ID=               # Se auto-configura al primer mensaje
+TELEGRAM_CHAT_ID=123456789          # OBLIGATORIO por seguridad: ID numérico del usuario/grupo autorizado. Si falta, el bot no iniciará.
 
 # === Google Calendar ===
 GOOGLE_CREDENTIALS_FILE=credentials.json

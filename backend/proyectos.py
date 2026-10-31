@@ -421,4 +421,4 @@ async def importar_matriz_docx(file: UploadFile = File(...)):
         }
     except Exception as e:
         logger.error(f"Error procesando docx: {e}")
-        raise HTTPException(status_code=422, detail=f"Error al leer el archivo Word .docx: {str(e)}")
+        raise HTTPException(status_code=422, detail="Error al leer el archivo Word .docx. Verifique el formato de tablas del documento.")

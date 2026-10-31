@@ -163,7 +163,7 @@ async def crear_vocero(data: VoceroCreate):
     except Exception as e:
         if "UNIQUE" in str(e):
             raise HTTPException(status_code=400, detail="Ya existe un vocero con esa cédula")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error interno al registrar el vocero")
 
 @router.put("/voceros/{vocero_id}")
 async def actualizar_vocero(vocero_id: int, data: VoceroCreate):
@@ -283,4 +283,4 @@ async def exportar_padron_xlsx():
         )
     except Exception as e:
         logger.error(f"Error al exportar padrón a Excel: {e}")
-        raise HTTPException(status_code=500, detail=f"Error al generar Excel: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error interno al generar el archivo Excel del padrón")

@@ -2589,6 +2589,44 @@ async function apiFetch(path, opts = {}) {
     return res.json();
 }
 
+
+async function abrirArchivoAutenticado(url, downloadName = null) {
+    try {
+        showLoading('Accediendo al documento...');
+        const token = localStorage.getItem('asistente_api_key') || '';
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        const res = await fetch(API + url, { headers });
+        if (!res.ok) {
+            if (res.status === 401) {
+                const nuevaClave = prompt('Esta acción requiere API Key autorizada. Por favor ingresa la clave:');
+                if (nuevaClave) {
+                    localStorage.setItem('asistente_api_key', nuevaClave.trim());
+                    return abrirArchivoAutenticado(url, downloadName);
+                }
+            }
+            throw new Error('No se pudo acceder al documento (' + res.statusText + ')');
+        }
+        const blob = await res.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        if (downloadName) {
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = downloadName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        } else {
+            window.open(blobUrl, '_blank');
+        }
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+    } catch (err) {
+        toast('error', err.message);
+    } finally {
+        hideLoading();
+    }
+}
+window.abrirArchivoAutenticado = abrirArchivoAutenticado;
+
 function initials(name) {
     return name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
 }
@@ -3046,7 +3084,7 @@ document.getElementById('form-vocero').addEventListener('submit', async function
 // ─── Export XLSX ───────────────────────────────────────────────────
 document.getElementById('btn-export-xlsx').addEventListener('click', async () => {
     try {
-        window.open(API + '/api/padron/exportar-xlsx', '_blank');
+        abrirArchivoAutenticado('/api/padron/exportar/excel', 'padron_comunal.xlsx');
     } catch (e) { toast('error', 'Error al exportar'); }
 });
 
@@ -3232,9 +3270,9 @@ function renderLettersList(data) {
             <div class="item-meta">${escapeHTML(l.destinatario)} · ${escapeHTML(l.fecha)}</div>
             ${l.vocero_firma ? `<div style="font-size:11px;color:var(--text-secondary);margin-top:2px">Firma: ${escapeHTML(l.vocero_firma)}</div>` : ''}
             <div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap">
-                ${pdfFn ? `<a href="/cartas/${pdfEncoded}" target="_blank" class="btn btn-sm" style="font-size:10px;padding:3px 8px"><i data-lucide="file-text" style="width:11px;height:11px"></i> PDF</a>` : ''}
-                ${docxFn ? `<a href="/cartas/${docxEncoded}" download class="btn btn-sm" style="font-size:10px;padding:3px 8px"><i data-lucide="file-down" style="width:11px;height:11px"></i> DOCX</a>` : ''}
-                ${pdfFn ? `<button onclick="window.open('/cartas/${pdfEncoded}','_blank')" class="btn btn-sm" style="font-size:10px;padding:3px 8px"><i data-lucide="printer" style="width:11px;height:11px"></i> Imprimir</button>` : ''}
+                ${pdfFn ? `<button onclick="abrirArchivoAutenticado('/cartas/${pdfEncoded}')" class="btn btn-sm" style="font-size:10px;padding:3px 8px"><i data-lucide="file-text" style="width:11px;height:11px"></i> PDF</button>` : ''}
+                ${docxFn ? `<button onclick="abrirArchivoAutenticado('/cartas/${docxEncoded}', '${docxFn}')" class="btn btn-sm" style="font-size:10px;padding:3px 8px"><i data-lucide="file-down" style="width:11px;height:11px"></i> DOCX</button>` : ''}
+                ${pdfFn ? `<button onclick="abrirArchivoAutenticado('/cartas/${pdfEncoded}')" class="btn btn-sm" style="font-size:10px;padding:3px 8px"><i data-lucide="printer" style="width:11px;height:11px"></i> Imprimir</button>` : ''}
             </div>
         </div>`}).join('');
     if(window.lucide)lucide.createIcons();
@@ -3483,7 +3521,7 @@ document.querySelectorAll('.btn-report').forEach(btn => {
             const fd = new FormData(); fd.append('periodo', period);
             const r = await apiFetch('/api/reports', { method: 'POST', body: fd });
             const c = document.getElementById('report-output-container');
-            const openLink = r.nombre_archivo ? `<a href="/informes/${r.nombre_archivo}" target="_blank" class="btn" style="font-size:11px;margin-top:8px"><i data-lucide="external-link" style="width:12px;height:12px"></i> Abrir informe</a>` : '';
+            const openLink = r.nombre_archivo ? `<button onclick="abrirArchivoAutenticado('/informes/${encodeURIComponent(r.nombre_archivo)}')" class="btn" style="font-size:11px;margin-top:8px"><i data-lucide="external-link" style="width:12px;height:12px"></i> Abrir informe</button>` : '';
             c.innerHTML = `<div class="list-item">
                 <div class="item-title">Informe ${r.tipo}</div>
                 <div class="item-meta">${r.total_actividades} actividades · ${r.total_participantes} participantes</div>
@@ -3627,10 +3665,7 @@ document.getElementById('form-acta-upload').addEventListener('submit', async fun
         const formData = new FormData();
         formData.append('file', fileInput.files[0]);
 
-        const res = await fetch(API + '/api/actas/upload', { method: 'POST', body: formData });
-        if (!res.ok) throw new Error((await res.json()).detail || 'Error al procesar el PDF');
-
-        const data = await res.json();
+        const data = await apiFetch('/api/actas/upload', { method: 'POST', body: formData });
         const d = data.datos;
 
         actaActualId = d.acta_id;

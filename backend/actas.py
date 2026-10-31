@@ -44,7 +44,7 @@ async def upload_acta(file: UploadFile = File(...)):
         # Limpiar archivo si falla la extracción
         pdf_path.unlink(missing_ok=True)
         logger.error(f"Error extrayendo acta {file.filename}: {e}")
-        raise HTTPException(status_code=422, detail=f"No se pudieron extraer datos del PDF: {str(e)}")
+        raise HTTPException(status_code=422, detail="No se pudieron extraer datos del PDF. Verifique que el archivo sea legible.")
 
     datos["filename"] = file.filename
 
