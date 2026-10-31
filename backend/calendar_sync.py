@@ -1,5 +1,6 @@
 import os
 import logging
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 from google.auth.transport.requests import Request
@@ -88,7 +89,6 @@ async def agregar_evento_calendario(
         
     try:
         # Calcular fecha/hora de fin básica
-        from datetime import datetime, timedelta
         dt_start = datetime.fromisoformat(fecha_limite_iso)
         dt_end = dt_start + timedelta(minutes=duracion_minutos)
         fecha_fin_iso = dt_end.isoformat()

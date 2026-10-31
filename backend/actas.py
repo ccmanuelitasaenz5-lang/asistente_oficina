@@ -19,16 +19,23 @@ ACTAS_DIR.mkdir(parents=True, exist_ok=True)
 @router.post("/upload")
 async def upload_acta(file: UploadFile = File(...)):
     """Sube un acta PDF, extrae sus datos y retorna una previsualización."""
-    if not file.filename.lower().endswith('.pdf'):
+    if not file.filename or not file.filename.lower().endswith('.pdf'):
         raise HTTPException(status_code=400, detail="Solo se aceptan archivos PDF")
 
-    # Guardar PDF
+    # Validar tamaño máximo (25 MB)
+    MAX_PDF_SIZE = 25 * 1024 * 1024
+    content = await file.read()
+    if len(content) > MAX_PDF_SIZE:
+        raise HTTPException(status_code=400, detail="El archivo excede el tamaño máximo permitido (25 MB)")
+
+    # Sanitizar nombre para evitar path traversal
+    safe_name = Path(file.filename).name
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"acta_{timestamp}_{file.filename}"
+    filename = f"acta_{timestamp}_{safe_name}"
     pdf_path = ACTAS_DIR / filename
 
     with open(pdf_path, "wb") as f:
-        shutil.copyfileobj(file.file, f)
+        f.write(content)
 
     # Extraer datos
     try:

@@ -1110,6 +1110,20 @@ async def _generar_respuesta_ia(
         """Truncar texto añadiendo '...' si excede el límite"""
         return texto[:limite] + "..." if len(texto) > limite else texto
 
+    def _enmascarar_cedula(cedula_val, query_str=""):
+        """Enmascara la cédula (ej. V-***789) para proteger la privacidad ante LLMs externos."""
+        if not cedula_val or str(cedula_val).strip() in ("Sin cédula", ""):
+            return "No registrada"
+        c_limp = str(cedula_val).strip()
+        nums = "".join(ch for ch in c_limp if ch.isdigit())
+        if nums and len(nums) >= 5 and nums in (query_str or ""):
+            return c_limp  # El usuario buscó explícitamente esta cédula
+        if len(nums) >= 4:
+            pref = c_limp.split("-")[0] + "-" if "-" in c_limp else ""
+            return f"{pref}***{nums[-3:]}"
+        return "***"
+
+
     # OPTIMIZACIÓN: Limitar contexto a máximo 30 entradas
     limite_contexto = min(len(resultados), max_context_entries)
 
@@ -1121,7 +1135,7 @@ async def _generar_respuesta_ia(
 
         if fuente == "voceros":
             nombre = r.get("nombre", "Sin nombre")
-            cedula = r.get("cedula", "Sin cédula")
+            cedula = _enmascarar_cedula(r.get("cedula", ""), query)
             cargo = r.get("cargo", "Sin cargo")
             consejo = r.get("consejo", "Sin consejo")
 
@@ -1197,7 +1211,7 @@ async def _generar_respuesta_ia(
                 )
             else:
                 jefe = r.get("jefe", "")
-                cedula = r.get("cedula", "")
+                cedula = _enmascarar_cedula(r.get("cedula", ""), query)
                 consejo = r.get("consejo", "")
                 habitantes = r.get("habitantes", 0)
                 contexto_parts.append(

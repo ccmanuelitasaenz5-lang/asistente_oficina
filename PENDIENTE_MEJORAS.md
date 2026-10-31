@@ -1,90 +1,61 @@
-# 📋 TAREAS PENDIENTES — Mejoras Asistente Comunal CPPO
-**Creado:** 19 de julio de 2026  
-**Estado:** ⏳ Pendiente para próxima sesión  
-**Basado en:** Auditorías Backend, Frontend y Análisis Crítico del Agente IA (24 archivos)
+# 📋 TAREAS PENDIENTES Y AUDITORÍA — Asistente Comunal CPPO
+**Última actualización:** 31 de octubre de 2026  
+**Estado:** ✅ Auditoría integral aplicada (prioridades alta y media resueltas)  
+**Basado en:** Revisión integral de seguridad, arquitectura y dependencias (f6d173c)
 
 ---
 
-## 🔴 URGENTE — Hacer primero (< 2h de trabajo total)
+## ✅ MEJORAS DE AUDITORÍA COMPLETADAS (31/10/2026)
 
-### Backend
-- [x] **1. Mover datos personales hardcodeados a `.env`** (`backend/letters.py`)
-- [x] **2. Corregir OCR síncrono que bloquea el event loop** (`backend/pdf_extractor.py`)
-- [x] **3. Eliminar los 10 `logging.basicConfig` duplicados** (crear `logging_config.py`)
+### Seguridad y Control de Acceso
+- [x] **Autenticación robusta y efectiva:**
+  - `API_KEY` se compara mediante `hmac.compare_digest` para evitar ataques de temporización (timing attacks).
+  - `SERVER_HOST` fijado por defecto en `127.0.0.1` (localhost) en lugar de exponerse a toda la red por defecto.
+  - `frontend/index.html` envía la cabecera `Authorization: Bearer <API_KEY>` desde `localStorage` en `apiFetch` y solicita la clave si recibe 401.
+  - Rutas estáticas de documentos sensibles (`/cartas`, `/informes`, `/media/actas`) protegidas con autenticación cuando `API_KEY` está activa.
+- [x] **Protección contra Path Traversal en `/api/universal/carpeta`:**
+  - Verificación estricta con `is_relative_to(DOCUMENTOS_PATH)` para impedir lectura de rutas del sistema fuera del directorio comunal.
+- [x] **Seguridad en Telegram Bot:**
+  - `TELEGRAM_CHAT_ID` es obligatorio en `.env` para iniciar el bot.
+  - `es_chat_autorizado` rechaza mensajes de remitentes no configurados (eliminada la auto-vinculación insegura).
+- [x] **Sanitización y límites de subida de archivos:**
+  - `backend/actas.py`: Sanitización de nombre de archivo con `Path(filename).name` para prevenir path traversal en Windows, y límite de 25 MB en PDFs.
+  - `backend/proyectos.py`: Límite de 20 MB en archivos Word `.docx`.
+- [x] **Privacidad de datos ante IA externa:**
+  - Enmascaramiento de cédulas de identidad (`_enmascarar_cedula`) en voceros y censo demográfico antes de enviar contextos a APIs externas (NVIDIA, Zhipu, Gemini, Cohere, HuggingFace), protegiendo la identidad de la comunidad.
+- [x] **Fugas de información mitigadas:**
+  - `/api/status` ya no expone rutas absolutas del disco; devuelve el estado de disponibilidad y nombre del directorio.
+  - `upload-photo` devuelve ruta relativa (`/media/...`) en lugar de rutas absolutas de Windows.
+  - Manejo de excepciones 500 sin volcado de `detail=str(e)`.
 
-### Frontend
-- [x] **4. Eliminar archivo huérfano `app.js`**
-- [x] **5. Agregar `integrity` (SRI) a los recursos CDN** (`index.html`)
-
----
-
-## 🟡 IMPORTANTE — Próximas 2 semanas
-
-### Backend & Lógica
-- [x] **6. Optimizar RAG y Reducir Costos de IA (Fase 1 de 3 completada)**
-  - Archivo: `backend/universal_agent.py`
-  - ✅ **Fase 1 completada** (29/09/2026):
-    - Contexto limitado a máximo 30 entradas (antes: 60 para voceros, 15 para otros)
-    - Resúmenes compactos por tipo de fuente, con cédula incluida
-    - SQL con parámetros seguros (sin f-strings con valores de usuario)
-    - Función `_truncar` definida una sola vez (no dentro del bucle)
-    - Parámetro `formato` eliminado de `_generar_respuesta_ia`
-    - Prueba funcional exitosa: 30 voceros, 8.6 segundos
-  - ⏳ **Fase 2 pendiente**: Cache LRU con TTL de 5 min + timeouts por fuente (5s)
-  - ⏳ **Fase 3 pendiente**: Paralelismo con timeout individual + FTS
-### Frontend
-- [ ] **12. Mitigar riesgo XSS (35 usos de `innerHTML`)** (`frontend/index.html`)
-- [ ] **13. Separar código del `index.html` (Monolito de 3.323 líneas)**
-
----
-
-## 🔵 CUANDO SALGA A INTERNET — Antes del despliegue
-
-- [ ] **14. Hacer `API_KEY` obligatoria en producción**
-- [ ] **15. Proteger archivos estáticos `/media`, `/cartas`, `/informes`**
-- [ ] **16. Agregar rate limiting con `slowapi`**
-- [ ] **17. Sanitizar SQL injection en LanceDB**
-- [ ] **18. Configurar CSP en el backend para el frontend**
+### Bugs y Arquitectura
+- [x] **Corrección de bug en Google Calendar (`calendar_sync.py`):**
+  - Importación global de `datetime` y `timedelta` a nivel de módulo, resolviendo el `NameError` que impedía la sincronización de tareas.
+- [x] **PWA 100% Offline y Recursos Locales:**
+  - Movidos `lucide.js` y `chart.js` a `frontend/` y cargados localmente en `index.html` (sin dependencia de CDNs externos ni riesgo de SRI).
+  - Eliminado el archivo huérfano `frontend/app.js`.
+- [x] **Actualización y fijación de dependencias (`requirements.txt`):**
+  - `Pillow` actualizado a versión segura `13.0.0` (probado con matplotlib y pytesseract).
+  - Versiones fijadas para `fastapi==0.162.0`, `uvicorn[standard]==0.54.0`, `python-multipart==0.0.32`, `python-dotenv==1.2.4`.
+- [x] **Índices de base de datos SQLite:**
+  - Agregados índices `idx_voceros_consejo`, `idx_voceros_cedula`, `idx_voceros_cargo`, `idx_actividades_fecha`, `idx_cartas_fecha`, `idx_tareas_fecha`, `idx_actas_consejo`, `idx_documentos_hash`.
 
 ---
 
-## 🧠 EVOLUCIÓN DEL AGENTE IA (De Chatbot a Asistente Ejecutor)
+## 🟡 PENDIENTES A FUTURO (Mediano y largo plazo)
 
-- [x] **19. Agente Ejecutor (Function Calling)**
-  - Acción: Dotar al agente de herramientas para que *haga cosas*, no solo responda (ej: `programar_actividad()`, `generar_carta()`, `crear_vocero()`).
-- [ ] **20. Manejo de Errores IA y Retry**
-  - Acción: Implementar backoff exponencial si fallan los proveedores.
-- [ ] **21. Modo Asistente Proactivo**
-  - Acción: Alertas automáticas (cargos vencidos, falta de actividades, recordatorios de consultas).
-- [ ] **22. Feedback Loop**
-  - Acción: Botón 👍/👎 en frontend para guardar respuestas fallidas y afinar prompts.
+### Frontend & UI
+- [ ] **Modularización de `index.html`:**
+  - El archivo cuenta con más de 3.000 líneas de HTML y JS embebido; en futuras fases convendría modularizar componentes o migrar a Vue 3 / Vite.
+- [ ] **Revisión profunda de `innerHTML`:**
+  - Continuar asegurando que todas las variables dinámicas pasen por `escapeHTML()` antes de inyectarse.
 
----
+### Agente IA & Automatizaciones
+- [ ] **Cache de consultas frecuentes:**
+  - Implementar cache LRU de 5 minutos para preguntas repetidas sobre voceros y padrón.
+- [ ] **Alertas proactivas:**
+  - Notificación proactiva cuando los periodos estatutarios de vocerías estén por vencerse.
 
-## 📦 MEJORAS A MÓDULOS DE NEGOCIO (Mediano plazo)
-
-- **Calendario**: Sincronización bidireccional, agenda pública, alertas por WhatsApp/SMS.
-- **Reportes**: Reportes automáticos mensuales, formatos institucionales (CNE, MinComunas).
-- **Cartas**: Numeración correlativa automática, plantillas parametrizables, registro de respuestas.
-- **Actas**: Firma digital, cálculo de quórum automático.
-- **Actividades**: Control de asistencia, carga múltiple de fotos, presupuesto.
-- **Consultas**: Voto ponderado, resultados en tiempo real, cierre automático.
-
----
-
-## 🟣 REFACTORIZACIÓN MAYOR (A mediano/largo plazo)
-
-- [ ] **23. Migrar Frontend a Vue 3 + Vite**
-- [ ] **24. Separar `main.py` en routers organizados (Backend)**
-- [ ] **25. Implementar patrón Repository/Service (Backend)**
-
----
-
-## ❓ DECISIONES PENDIENTES (Actualizado)
-
-1. ¿Mover datos personales de `letters.py` a `.env`?
-2. ¿Mantener SQLite o migrar a PostgreSQL? *(Recomendación: quedarse con SQLite)*
-3. ¿Autenticación por usuarios (login) o solo API key?
-4. ¿Para el frontend prefieres Vue 3 o React? *(Recomendación: Vue 3)*
-5. **¿Empezamos transformando el Agente a "Agente Ejecutor" o resolvemos primero la seguridad básica?**
-6. ¿Despliegue en servidor/VPS o Docker local por ahora?
+### Infraestructura
+- [ ] **Configuración de arranque en producción:**
+  - `start.bat` o servicio de Windows con uvicorn en modo producción (`reload=False` y workers).

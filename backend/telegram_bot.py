@@ -26,20 +26,13 @@ MEDIA_PATH.mkdir(parents=True, exist_ok=True)
 # Helper to verify if the message comes from the authorized vocero/chat
 def es_chat_autorizado(chat_id: int) -> bool:
     if not TELEGRAM_CHAT_ID:
-        # Si no se configuró chat_id, se auto-configura con el primero que hable
-        return True
+        return False
     return str(chat_id) == str(TELEGRAM_CHAT_ID)
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Muestra el mensaje de bienvenida y comandos del bot."""
     chat_id = update.effective_chat.id
     
-    # Auto-vincular si no está configurado
-    global TELEGRAM_CHAT_ID
-    if not TELEGRAM_CHAT_ID:
-        TELEGRAM_CHAT_ID = str(chat_id)
-        logger.info(f"Telegram Chat ID auto-configurado con el ID: {chat_id}")
-        
     if not es_chat_autorizado(chat_id):
         await update.message.reply_text("Acceso no autorizado.")
         return
@@ -367,6 +360,9 @@ def inicializar_bot():
     global bot_application
     if not TELEGRAM_BOT_TOKEN:
         logger.warning("TELEGRAM_BOT_TOKEN no configurado. El bot de Telegram no se iniciará.")
+        return None
+    if not TELEGRAM_CHAT_ID:
+        logger.warning("TELEGRAM_CHAT_ID no configurado en .env. El bot de Telegram no se iniciará por seguridad.")
         return None
         
     try:

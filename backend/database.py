@@ -307,6 +307,23 @@ async def init_db():
         );
         """)
 
+        # ── ÍNDICES DE RENDIMIENTO (Optimización de búsquedas y reportes) ───────
+        indices = [
+            "CREATE INDEX IF NOT EXISTS idx_voceros_consejo ON voceros(consejo_id);",
+            "CREATE INDEX IF NOT EXISTS idx_voceros_cedula ON voceros(cedula);",
+            "CREATE INDEX IF NOT EXISTS idx_voceros_cargo ON voceros(cargo);",
+            "CREATE INDEX IF NOT EXISTS idx_actividades_fecha ON actividades(fecha);",
+            "CREATE INDEX IF NOT EXISTS idx_cartas_fecha ON cartas(fecha);",
+            "CREATE INDEX IF NOT EXISTS idx_tareas_fecha ON tareas(fecha_limite);",
+            "CREATE INDEX IF NOT EXISTS idx_actas_consejo ON actas(consejo_id);",
+            "CREATE INDEX IF NOT EXISTS idx_documentos_hash ON documentos(hash_archivo);",
+        ]
+        for idx in indices:
+            try:
+                await db.execute(idx)
+            except Exception:
+                pass
+
         await db.commit()
 
 async def obtener_siguiente_numero_oficio(prefijo="CPPO"):

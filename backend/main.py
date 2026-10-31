@@ -1,4 +1,5 @@
 import logging
+import hmac
 import os
 import asyncio
 from contextlib import asynccontextmanager
@@ -113,10 +114,24 @@ app.add_middleware(
 # Auth opcional: si API_KEY está definida en .env, protege todas las rutas /api/*
 @app.middleware("http")
 async def auth_middleware(request: Request, call_next):
-    if API_KEY and request.url.path.startswith("/api/") and request.url.path != "/api/status":
-        auth = request.headers.get("Authorization", "")
-        if not auth.startswith("Bearer ") or auth[7:] != API_KEY:
+    # Rutas protegidas si API_KEY está configurada en .env
+    path = request.url.path
+    necesita_auth = False
+    
+    if API_KEY:
+        if path.startswith("/api/") and path != "/api/status":
+            necesita_auth = True
+        elif path.startswith("/cartas") or path.startswith("/informes") or path.startswith("/media/actas"):
+            necesita_auth = True
+            
+    if necesita_auth:
+        auth_header = request.headers.get("Authorization", "")
+        token_param = request.query_params.get("token", "")
+        token = auth_header[7:].strip() if auth_header.startswith("Bearer ") else token_param.strip()
+        
+        if not token or not hmac.compare_digest(token.encode("utf-8"), API_KEY.encode("utf-8")):
             return JSONResponse(status_code=401, content={"detail": "API Key inválida o ausente"})
+            
     return await call_next(request)
 
 # Servir archivos generados e imágenes
@@ -181,7 +196,8 @@ async def get_status():
     return {
         "status": "online",
         "cuotas_ia": AI_QUOTAS,
-        "directorio_documentos": str(DOCUMENTOS_PATH),
+        "carpeta_documentos": DOCUMENTOS_PATH.name if DOCUMENTOS_PATH.exists() else "No configurada",
+        "documentos_disponibles": DOCUMENTOS_PATH.exists(),
         "idioma": "es"
     }
 
@@ -269,8 +285,8 @@ async def post_search(query: ConsultaRAG):
         resultado = await responder_consulta(query.pregunta)
         return resultado
     except Exception as e:
-        logger.error(f"Error procesando búsqueda RAG: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error procesando búsqueda RAG: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error procesando la consulta inteligente")
 
 @app.get("/api/activities")
 async def get_activities(fecha_inicio: Optional[str] = None, fecha_fin: Optional[str] = None, categoria: Optional[str] = None):
@@ -278,7 +294,8 @@ async def get_activities(fecha_inicio: Optional[str] = None, fecha_fin: Optional
     try:
         return await obtener_actividades(fecha_inicio, fecha_fin, categoria)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error obteniendo actividades: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error al obtener las actividades")
 
 @app.post("/api/activities")
 async def post_activity(act: NuevaActividad):
@@ -336,7 +353,11 @@ async def upload_activity_photo(file: UploadFile = File(...)):
     with open(filepath, "wb") as buffer:
         buffer.write(content)
         
-    return {"filepath": str(filepath.resolve())}
+    return {
+        "filepath": f"media/{filename}",
+        "filename": filename,
+        "url": f"/media/{filename}"
+    }
 
 @app.get("/api/activities/categories")
 async def get_categories():
@@ -360,8 +381,8 @@ async def generate_report(periodo: str = Form(...)):
         res = await generar_informe_pdf(periodo)
         return res
     except Exception as e:
-        logger.error(f"Error generando informe: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error generando informe: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error al generar el informe PDF")
 
 @app.post("/api/letters")
 async def post_letter(letter: NuevaCarta):
@@ -377,8 +398,8 @@ async def post_letter(letter: NuevaCarta):
         )
         return res
     except Exception as e:
-        logger.error(f"Error generando carta: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error generando carta: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error al generar el oficio")
 
 @app.get("/api/letters/list")
 async def list_letters():
@@ -468,19 +489,28 @@ async def api_consulta_universal(request: Request):
 async def api_buscar_en_carpeta(request: Request):
     """
     Busca texto en archivos de una carpeta sin indexación previa.
+    Restringido estrictamente al directorio de documentos de la comuna.
     Body: {"query": "...", "carpeta": "...", "extensiones": [".pdf"]}
     """
     try:
         body = await request.json()
         query = (body.get("query") or "").strip()
-        carpeta = (body.get("carpeta") or "").strip()
+        carpeta_input = (body.get("carpeta") or "").strip()
         if not query:
             raise HTTPException(status_code=400, detail="Se requiere el campo 'query'")
-        if not carpeta:
+        if not carpeta_input:
             raise HTTPException(status_code=400, detail="Se requiere el campo 'carpeta'")
+        
+        carpeta_res = Path(carpeta_input).resolve()
+        docs_res = DOCUMENTOS_PATH.resolve()
+        try:
+            carpeta_res.relative_to(docs_res)
+        except ValueError:
+            raise HTTPException(status_code=403, detail="Acceso denegado: solo se permite buscar dentro de la carpeta de documentos comunales.")
+
         resultado = await buscar_en_carpeta(
             query=query,
-            carpeta=Path(carpeta).resolve(),
+            carpeta=carpeta_res,
             extensiones=body.get("extensiones"),
         )
         return resultado

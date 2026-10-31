@@ -370,7 +370,10 @@ async def importar_matriz_docx(file: UploadFile = File(...)):
 
     try:
         import docx
+        MAX_DOCX_SIZE = 20 * 1024 * 1024  # 20 MB
         contents = await file.read()
+        if len(contents) > MAX_DOCX_SIZE:
+            raise HTTPException(status_code=400, detail="El archivo Word excede el tamaño máximo permitido (20 MB)")
         doc = docx.Document(io.BytesIO(contents))
         filas_extraidas = []
 

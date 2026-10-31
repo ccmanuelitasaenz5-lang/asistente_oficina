@@ -7,8 +7,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <script src="/lucide.js"></script>
+    <script src="/chart.js"></script>
     <style>
         :root {
             --bg:          #0d1117;
@@ -2567,8 +2567,22 @@ function hideLoading() { document.getElementById('loading').style.display = 'non
 
 // ─── Helpers ───────────────────────────────────────────────────────
 async function apiFetch(path, opts = {}) {
-    const res = await fetch(API + path, opts);
+    opts.headers = opts.headers || {};
+    const token = localStorage.getItem('asistente_api_key') || '';
+    if (token && !opts.headers['Authorization']) {
+        opts.headers['Authorization'] = `Bearer ${token}`;
+    }
+    let res = await fetch(API + path, opts);
     if (!res.ok) {
+        if (res.status === 401) {
+            const nuevaClave = prompt('Esta instancia requiere API Key autorizada. Por favor ingresa la clave:');
+            if (nuevaClave) {
+                localStorage.setItem('asistente_api_key', nuevaClave.trim());
+                opts.headers['Authorization'] = `Bearer ${nuevaClave.trim()}`;
+                res = await fetch(API + path, opts);
+                if (res.ok) return res.json();
+            }
+        }
         const err = await res.json().catch(() => ({ detail: res.statusText }));
         throw new Error(err.detail || 'Error de servidor');
     }
