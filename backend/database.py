@@ -286,6 +286,24 @@ async def init_db():
                 logger.error(f"Error ejecutando migración v3: {e}")
                 raise
 
+        # Columnas de la matriz 7T del módulo Proyectos que el esquema v3 no incluía.
+        # Se añaden solo si faltan, tanto en bases nuevas como en las ya existentes.
+        cursor = await db.execute("PRAGMA table_info(proyectos_aca)")
+        cols_proyectos = {r[1] for r in await cursor.fetchall()}
+        if cols_proyectos:
+            for col, ddl in [
+                ("transformacion_7t", "TEXT DEFAULT ''"),
+                ("voceria_vinculada", "TEXT DEFAULT ''"),
+                ("nudo_critico", "TEXT DEFAULT ''"),
+                ("potencialidades", "TEXT DEFAULT ''"),
+                ("accion_ejecutar", "TEXT DEFAULT ''"),
+                ("requerimiento", "TEXT DEFAULT ''"),
+                ("tiempo_ejecucion", "TEXT DEFAULT 'Corto Plazo'"),
+            ]:
+                if col not in cols_proyectos:
+                    await db.execute(f"ALTER TABLE proyectos_aca ADD COLUMN {col} {ddl}")
+                    logger.info(f"Columna añadida a proyectos_aca: {col}")
+
         # Safe column additions for cartas (always run, fail silently if exists)
         for col_sql in [
             "ALTER TABLE cartas ADD COLUMN docx_path TEXT",

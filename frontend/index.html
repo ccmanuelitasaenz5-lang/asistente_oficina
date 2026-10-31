@@ -2805,7 +2805,7 @@ document.getElementById('dash-search-vocero').addEventListener('input', async fu
         return;
     }
     try {
-        const data = await apiFetch(`/api/padron/voceros?q=${encodeURIComponent(q)}`);
+        const data = itemsDe(await apiFetch(`/api/padron/voceros?q=${encodeURIComponent(q)}`));
         if (!data || !data.length) {
             results.innerHTML = '<span style="color:var(--txt-muted)">Sin resultados.</span>';
             return;
@@ -2826,7 +2826,7 @@ document.getElementById('dash-search-vocero').addEventListener('input', async fu
 
 async function quickReportUnidad(unidad) {
     try {
-        const data = await apiFetch(`/api/padron/voceros?unidad=${encodeURIComponent(unidad)}`);
+        const data = itemsDe(await apiFetch(`/api/padron/voceros?unidad=${encodeURIComponent(unidad)}&limit=1000`));
         if (!data || !data.length) { toast('info', `No hay voceros en la unidad ${unidad}`); return; }
         switchTab('padron');
         document.querySelectorAll('.unidad-btn').forEach(b => {
@@ -2841,6 +2841,10 @@ async function quickReportUnidad(unidad) {
 
 // ─── PADRÓN ────────────────────────────────────────────────────────
 let consejosCached = [];
+// La API de voceros devuelve {items, total, page, pages}; acepta también un arreglo simple.
+function itemsDe(respuesta) {
+    return Array.isArray(respuesta) ? respuesta : ((respuesta && respuesta.items) || []);
+}
 let vocerosCachedFull = [];
 let activeUnidad = 'all';
 
@@ -2903,7 +2907,8 @@ async function loadVoceros(filtros = {}) {
         const params = new URLSearchParams();
         if (filtros.consejo_id) params.set('consejo_id', filtros.consejo_id);
         if (filtros.q) params.set('q', filtros.q);
-        const data = await apiFetch(`/api/padron/voceros?${params}`);
+        params.set('limit', 1000);  // el backend pagina de a 50 por defecto
+        const data = itemsDe(await apiFetch(`/api/padron/voceros?${params}`));
         vocerosCachedFull = data;
         // Filtro local por unidad (calculada a partir del cargo)
         const unidad = filtros.unidad || activeUnidad;
@@ -2911,7 +2916,9 @@ async function loadVoceros(filtros = {}) {
             ? data.filter(v => getUnidad(v.cargo) === unidad)
             : data;
         renderVoceros(filtered);
-    } catch {
+    } catch (e) {
+        console.error('Error cargando voceros:', e);
+        toast('error', 'No se pudo cargar el padrón de voceros');
         renderVoceros([]);
     }
 }
@@ -3292,7 +3299,7 @@ if (signerSearch) {
         if (q.length < 2) { signerDropdown.style.display = 'none'; return; }
         signerTimeout = setTimeout(async () => {
             try {
-                const voceros = await apiFetch(`/api/padron/voceros?q=${encodeURIComponent(q)}`);
+                const voceros = itemsDe(await apiFetch(`/api/padron/voceros?q=${encodeURIComponent(q)}`));
                 if (!voceros.length) { signerDropdown.style.display = 'none'; return; }
                 signerDropdown.innerHTML = voceros.map(v => `
                     <div style="padding:8px 10px;cursor:pointer;border-bottom:1px solid var(--border);font-size:12px"

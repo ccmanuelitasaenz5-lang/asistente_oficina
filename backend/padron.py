@@ -150,8 +150,10 @@ async def crear_vocero(data: VoceroCreate):
     try:
         async with await get_db() as db:
             cursor = await db.execute(
-                """INSERT INTO voceros ...""",
-                ...
+                """INSERT INTO voceros (consejo_id, nombre, cedula, cargo, telefono, email)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                (data.consejo_id, data.nombre, data.cedula, data.cargo,
+                 data.telefono, data.email)
             )
             await db.commit()
 
@@ -163,6 +165,7 @@ async def crear_vocero(data: VoceroCreate):
     except Exception as e:
         if "UNIQUE" in str(e):
             raise HTTPException(status_code=400, detail="Ya existe un vocero con esa cédula")
+        logger.exception("Error registrando vocero")
         raise HTTPException(status_code=500, detail="Error interno al registrar el vocero")
 
 @router.put("/voceros/{vocero_id}")
