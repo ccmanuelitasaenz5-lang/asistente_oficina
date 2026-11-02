@@ -113,15 +113,20 @@ async def listar_voceros(
             params.append(consejo_id)
         if unidad and unidad != 'all':
             u_lower = unidad.lower()
+            cargo_params = []
             if 'ejecutiva' in u_lower:
-                where_clauses.append("(v.cargo LIKE '%Ejecutiv%' OR v.cargo LIKE '%Finanzas%' OR v.cargo LIKE '%Economía%')")
+                por_cargo = "(v.cargo LIKE '%Ejecutiv%' OR v.cargo LIKE '%Finanzas%' OR v.cargo LIKE '%Economía%')"
             elif 'contralor' in u_lower:
-                where_clauses.append("v.cargo LIKE '%Contralor%'")
+                por_cargo = "v.cargo LIKE '%Contralor%'"
             elif 'electoral' in u_lower:
-                where_clauses.append("v.cargo LIKE '%Electoral%'")
+                por_cargo = "v.cargo LIKE '%Electoral%'"
             else:
-                where_clauses.append("v.cargo LIKE ?")
-                params.append(f"%{unidad}%")
+                por_cargo = "v.cargo LIKE ?"
+                cargo_params.append(f"%{unidad}%")
+            # Si el vocero tiene unidad guardada manda esa; si no (registros anteriores), el cargo.
+            where_clauses.append(f"(v.unidad = ? OR (v.unidad IS NULL AND {por_cargo}))")
+            params.append(unidad)
+            params.extend(cargo_params)
             
         where_sql = " AND ".join(where_clauses)
         
@@ -150,10 +155,10 @@ async def crear_vocero(data: VoceroCreate):
     try:
         async with await get_db() as db:
             cursor = await db.execute(
-                """INSERT INTO voceros (consejo_id, nombre, cedula, cargo, telefono, email)
-                   VALUES (?, ?, ?, ?, ?, ?)""",
+                """INSERT INTO voceros (consejo_id, nombre, cedula, cargo, unidad, telefono, email)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
                 (data.consejo_id, data.nombre, data.cedula, data.cargo,
-                 data.telefono, data.email)
+                 data.unidad, data.telefono, data.email)
             )
             await db.commit()
 
@@ -173,10 +178,10 @@ async def actualizar_vocero(vocero_id: int, data: VoceroCreate):
     """Actualiza datos de un vocero."""
     async with await get_db() as db:
         await db.execute(
-            """UPDATE voceros SET consejo_id=?, nombre=?, cedula=?, cargo=?, telefono=?, email=?
+            """UPDATE voceros SET consejo_id=?, nombre=?, cedula=?, cargo=?, unidad=?, telefono=?, email=?
                WHERE id=?""",
             (data.consejo_id, data.nombre, data.cedula, data.cargo,
-             data.telefono, data.email, vocero_id)
+             data.unidad, data.telefono, data.email, vocero_id)
         )
         await db.commit()
                 # Invalidar cache

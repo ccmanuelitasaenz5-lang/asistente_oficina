@@ -304,6 +304,14 @@ async def init_db():
                     await db.execute(f"ALTER TABLE proyectos_aca ADD COLUMN {col} {ddl}")
                     logger.info(f"Columna añadida a proyectos_aca: {col}")
 
+        # Unidad del vocero (Ejecutiva, Contraloría Social, etc.): el formulario la pide
+        # pero la tabla no tenía dónde guardarla. Los voceros anteriores quedan en NULL
+        # y siguen clasificándose por su cargo.
+        cursor = await db.execute("PRAGMA table_info(voceros)")
+        if "unidad" not in {r[1] for r in await cursor.fetchall()}:
+            await db.execute("ALTER TABLE voceros ADD COLUMN unidad TEXT")
+            logger.info("Columna añadida a voceros: unidad")
+
         # Safe column additions for cartas (always run, fail silently if exists)
         for col_sql in [
             "ALTER TABLE cartas ADD COLUMN docx_path TEXT",

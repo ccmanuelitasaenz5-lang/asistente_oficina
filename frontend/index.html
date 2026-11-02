@@ -2636,6 +2636,11 @@ function escapeHTML(str) {
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
+// Unidad de un vocero: la guardada en la base de datos o, en registros anteriores, la deducida del cargo.
+function unidadDe(v) {
+    return v.unidad || getUnidad(v.cargo);
+}
+
 function getUnidad(cargo) {
     if (!cargo) return 'Otro';
     const c = cargo.toLowerCase();
@@ -2913,7 +2918,7 @@ async function loadVoceros(filtros = {}) {
         // Filtro local por unidad (calculada a partir del cargo)
         const unidad = filtros.unidad || activeUnidad;
         const filtered = (unidad && unidad !== 'all')
-            ? data.filter(v => getUnidad(v.cargo) === unidad)
+            ? data.filter(v => unidadDe(v) === unidad)
             : data;
         renderVoceros(filtered);
     } catch (e) {
@@ -2973,7 +2978,7 @@ document.querySelectorAll('.unidad-btn[data-unidad]').forEach(btn => {
         // Si hay datos en caché, filtrar instantáneamente
         if (vocerosCachedFull.length) {
             const filtered = (activeUnidad && activeUnidad !== 'all')
-                ? vocerosCachedFull.filter(v => getUnidad(v.cargo) === activeUnidad)
+                ? vocerosCachedFull.filter(v => unidadDe(v) === activeUnidad)
                 : vocerosCachedFull;
             renderVoceros(filtered);
         } else {
