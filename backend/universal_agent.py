@@ -1368,8 +1368,7 @@ async def consulta_universal(
         resultados_fusionados,
         history=history
     )
-    ...
-    
+
     if thread_id:
         await guardar_mensaje_chat(thread_id, "user", query)
         await guardar_mensaje_chat(thread_id, "assistant", respuesta)
