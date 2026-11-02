@@ -1,4 +1,5 @@
 import logging
+import sqlite3
 import hmac
 import posixpath
 import re
@@ -102,6 +103,18 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan
 )
+
+@app.exception_handler(sqlite3.IntegrityError)
+async def integridad_handler(request: Request, exc: sqlite3.IntegrityError):
+    """Claves foráneas o duplicados: error del cliente (datos), no del servidor."""
+    msg = str(exc)
+    logger.warning(f"Integridad en {request.method} {request.url.path}: {msg}")
+    if "FOREIGN KEY" in msg.upper():
+        return JSONResponse(status_code=400, content={"detail": "Hace referencia a un registro que no existe (consejo, pregunta, etc.)."})
+    if "UNIQUE" in msg.upper():
+        return JSONResponse(status_code=409, content={"detail": "Ya existe un registro con esos datos."})
+    return JSONResponse(status_code=400, content={"detail": "Los datos enviados no cumplen las reglas de la base de datos."})
+
 
 # Configurar CORS (localhost-only, sin wildcard + credentials)
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:8000,http://127.0.0.1:8000")
