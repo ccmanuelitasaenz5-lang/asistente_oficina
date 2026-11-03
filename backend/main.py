@@ -255,6 +255,12 @@ async def get_dashboard_stats():
             "SELECT COUNT(*) FROM tareas WHERE completada=0"
         )
         tareas_pendientes = (await c.fetchone())[0]
+
+        # Tareas vencidas: pendientes cuya fecha límite ya pasó (el dashboard las muestra)
+        c = await db.execute(
+            "SELECT COUNT(*) FROM tareas WHERE completada=0 AND fecha_limite < ?", (hoy,)
+        )
+        tareas_vencidas = (await c.fetchone())[0]
         
         # Total documentos indexados
         c = await db.execute("SELECT COUNT(*) FROM documentos")
@@ -286,6 +292,7 @@ async def get_dashboard_stats():
         "participantes_mes": participantes_mes,
         "cartas_mes": cartas_mes,
         "tareas_pendientes": tareas_pendientes,
+        "tareas_vencidas": tareas_vencidas,
         "total_documentos": total_docs,
         "total_voceros": total_voceros,
         "total_consejos": total_consejos,

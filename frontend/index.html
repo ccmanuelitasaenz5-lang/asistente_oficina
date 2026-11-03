@@ -2688,7 +2688,7 @@ async function loadDashboard() {
             document.getElementById('kpi-cartas').textContent  = stats.cartas_mes;
             document.getElementById('kpi-tareas').textContent  = stats.tareas_pendientes;
             if (document.getElementById('kpi-vencidas')) {
-                document.getElementById('kpi-vencidas').textContent = stats.tareas_vencidas;
+                document.getElementById('kpi-vencidas').textContent = stats.tareas_vencidas ?? 0;
             }
         }
 
