@@ -1,3 +1,5 @@
+import time
+_T_ARRANQUE = time.perf_counter()  # primera línea: mide la importación de todo lo demás
 import logging
 import sqlite3
 import hmac
@@ -21,7 +23,7 @@ from backend.config import (
     INFORMES_PATH, CARTAS_PATH, AI_QUOTAS, API_KEY
 )
 from backend.database import init_db, get_db
-from backend.indexer import indexar_todos_documentos
+from backend.indexer import indexar_todos_documentos, precalentar_lancedb
 from backend.search import responder_consulta, buscar_documentos
 from backend.letters import crear_y_guardar_carta
 from backend.activities import registrar_actividad, obtener_actividades, listar_categorias, agregar_categoria
@@ -50,15 +52,29 @@ logger = logging.getLogger("main")
 
 # Instancia global del bot para limpieza
 bot_app = None
+_t_ultima = _T_ARRANQUE
+
+
+def _marca(mensaje: str):
+    """Escribe en consola el tiempo transcurrido desde que empezó a cargarse el backend,
+    y el de esta fase. Sirve para ver en qué paso se va el tiempo de arranque."""
+    global _t_ultima
+    ahora = time.perf_counter()
+    print(f"[arranque {ahora - _T_ARRANQUE:6.1f} s | fase +{ahora - _t_ultima:6.1f} s] {mensaje}", flush=True)
+    _t_ultima = ahora
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manejo de inicio y parada de servicios (DB y Telegram Bot)."""
     global bot_app
-    
+
+    _marca("Módulos del backend importados; iniciando servicios")
+
     # 1. Inicializar base de datos
     logger.info("Inicializando Base de Datos...")
     await init_db()
+    _marca("Base de datos lista")
     
     # 2. Indexar documentos al inicio en segundo plano (Desactivado para evitar bucles)
     # logger.info("Lanzando indexación de documentos en segundo plano...")
@@ -79,10 +95,14 @@ async def lifespan(app: FastAPI):
             logger.info("Bot de Telegram iniciado exitosamente.")
         except Exception as e:
             logger.error(f"No se pudo iniciar el Bot de Telegram: {e}")
+    _marca("Bot de Telegram " + ("procesado" if bot_app else "no configurado (omitido)"))
 
     # 4. Iniciar scheduler de notificaciones proactivas
     logger.info("Iniciando scheduler de notificaciones...")
     asyncio.create_task(iniciar_scheduler())
+    # Búsqueda semántica: se carga en segundo plano, sin retrasar el arranque
+    precalentar_lancedb()
+    _marca("Scheduler programado. Servidor listo para recibir peticiones")
 
     yield
     

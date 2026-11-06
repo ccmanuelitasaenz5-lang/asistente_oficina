@@ -3,6 +3,7 @@ import hashlib
 import json
 import logging
 import asyncio
+import threading
 from pathlib import Path
 import fitz  # PyMuPDF
 import docx
@@ -15,41 +16,88 @@ from backend.database import get_db
 
 logger = logging.getLogger("indexer")
 
-# Intentar inicializar LanceDB
+# --- LanceDB + modelo de embeddings: se cargan BAJO DEMANDA, no al importar ---
+# Antes se importaban lancedb/torch/transformers y se cargaba el modelo en cada arranque (minutos).
+# Ahora la carga ocurre en un hilo en segundo plano (precalentar_lancedb) o al indexar. Mientras no
+# esté lista, obtener_coleccion(esperar=False) devuelve None y la búsqueda usa FTS5.
 db = None
 collection = None
-try:
-    import lancedb
-    from lancedb.pydantic import Vector, LanceModel
-    from lancedb.embeddings import get_registry
+_lancedb_estado = "pendiente"  # pendiente | listo | no_disponible
+_lancedb_lock = threading.Lock()
+_lancedb_hilo = None
 
-    # Usamos la API de Cohere (embed-multilingual-v3.0) para embeddings rápidos en la nube, sin procesar en la CPU local.
-    # Alternativamente, si no está configurada, se puede usar "gemini" o "openai" mediante el registro.
-    # Como la clave de Cohere se lee del archivo .env y se exporta a las variables del sistema, LanceDB la detectará automáticamente.
-    if COHERE_API_KEY and COHERE_API_KEY != "tu_clave_cohere_aqui":
-        os.environ["COHERE_API_KEY"] = COHERE_API_KEY
-        embed_fn = get_registry().get("cohere").create(name="embed-multilingual-v3.0")
-        logger.info("Usando Cohere API para embeddings (embed-multilingual-v3.0).")
-    else:
-        embed_fn = get_registry().get("sentence-transformers").create(name="paraphrase-multilingual-MiniLM-L12-v2")
-        logger.info("Usando sentence-transformers local (paraphrase-multilingual-MiniLM-L12-v2).")
 
-    class Documento(LanceModel):
-        id: str
-        ruta: str
-        nombre: str
-        pagina: str
-        tipo: str
-        texto: str = embed_fn.SourceField()
-        vector: Vector(embed_fn.ndims()) = embed_fn.VectorField()
+def _inicializar_lancedb():
+    """Trabajo pesado: importa lancedb y carga el modelo de embeddings. Se ejecuta una sola vez."""
+    global db, collection, _lancedb_estado
+    try:
+        import lancedb
+        from lancedb.pydantic import Vector, LanceModel
+        from lancedb.embeddings import get_registry
 
-    db = lancedb.connect(CHROMA_PATH + "_lancedb")
-    collection = db.create_table("documentos_comuna", schema=Documento, exist_ok=True)
-    logger.info("LanceDB y modelo de embeddings inicializados exitosamente.")
-except ImportError:
-    logger.warning("LanceDB no instalado o sentence-transformers ausente. Se usará FTS5 como fallback.")
-except Exception as e:
-    logger.error(f"Error al inicializar LanceDB/Embeddings: {e}. Se usará FTS5 como fallback.")
+        # Usamos la API de Cohere (embed-multilingual-v3.0) para embeddings rápidos en la nube, sin procesar en la CPU local.
+        # Alternativamente, si no está configurada, se puede usar "gemini" o "openai" mediante el registro.
+        # Como la clave de Cohere se lee del archivo .env y se exporta a las variables del sistema, LanceDB la detectará automáticamente.
+        if COHERE_API_KEY and COHERE_API_KEY != "tu_clave_cohere_aqui":
+            os.environ["COHERE_API_KEY"] = COHERE_API_KEY
+            embed_fn = get_registry().get("cohere").create(name="embed-multilingual-v3.0")
+            logger.info("Usando Cohere API para embeddings (embed-multilingual-v3.0).")
+        else:
+            embed_fn = get_registry().get("sentence-transformers").create(name="paraphrase-multilingual-MiniLM-L12-v2")
+            logger.info("Usando sentence-transformers local (paraphrase-multilingual-MiniLM-L12-v2).")
+
+        class Documento(LanceModel):
+            id: str
+            ruta: str
+            nombre: str
+            pagina: str
+            tipo: str
+            texto: str = embed_fn.SourceField()
+            vector: Vector(embed_fn.ndims()) = embed_fn.VectorField()
+
+        db = lancedb.connect(CHROMA_PATH + "_lancedb")
+        collection = db.create_table("documentos_comuna", schema=Documento, exist_ok=True)
+        _lancedb_estado = "listo"
+        logger.info("LanceDB y modelo de embeddings inicializados exitosamente.")
+    except ImportError:
+        _lancedb_estado = "no_disponible"
+        logger.warning("LanceDB no instalado o sentence-transformers ausente. Se usará FTS5 como fallback.")
+    except Exception as e:
+        _lancedb_estado = "no_disponible"
+        logger.error(f"Error al inicializar LanceDB/Embeddings: {e}. Se usará FTS5 como fallback.")
+
+
+def _cargar_una_vez():
+    with _lancedb_lock:
+        if _lancedb_estado == "pendiente":
+            _inicializar_lancedb()
+
+
+def precalentar_lancedb():
+    """Inicia la carga en un hilo en segundo plano (no bloquea). Es seguro llamarla varias veces."""
+    global _lancedb_hilo
+    if _lancedb_estado != "pendiente" or _lancedb_hilo is not None:
+        return
+    _lancedb_hilo = threading.Thread(target=_cargar_una_vez, name="lancedb-precarga", daemon=True)
+    _lancedb_hilo.start()
+
+
+def obtener_coleccion(esperar: bool = True):
+    """Devuelve la colección de LanceDB, o None si no está disponible (o aún cargando).
+
+    esperar=True : si todavía no está cargada, la carga ahora y espera (puede tardar minutos).
+    esperar=False: no bloquea; si no está lista devuelve None (y se asegura de que cargue en
+                   segundo plano), para que quien llama use FTS5 mientras tanto.
+    """
+    if _lancedb_estado == "listo":
+        return collection
+    if _lancedb_estado == "no_disponible":
+        return None
+    if not esperar:
+        precalentar_lancedb()
+        return None
+    _cargar_una_vez()
+    return collection if _lancedb_estado == "listo" else None
 
 # Asegurar que el directorio de documentos existe
 DOCUMENTOS_PATH.mkdir(parents=True, exist_ok=True)
@@ -248,7 +296,9 @@ async def indexar_archivo(filepath: Path):
     # Indexar en SQLite FTS5 (búsqueda clásica)
     await insertar_chunks_fts(ruta, nombre, paginas)
     
-    # Indexar en LanceDB (búsqueda semántica) si está disponible
+    # Indexar en LanceDB (búsqueda semántica) si está disponible. La primera vez carga el
+    # modelo (puede tardar); se hace en un hilo para no bloquear el servidor.
+    collection = await asyncio.to_thread(obtener_coleccion)
     if collection is not None:
         try:
             # Eliminar documentos viejos en LanceDB si existen

@@ -1,6 +1,6 @@
 import logging
 from typing import List, Dict
-from backend.indexer import collection
+from backend.indexer import obtener_coleccion
 from backend.database import get_db
 from backend.ai_router import generar_texto
 
@@ -53,7 +53,8 @@ async def buscar_documentos(query: str, top_k: int = 5) -> List[dict]:
     """
     resultados = []
     
-    # 1. Intentar LanceDB
+    # 1. Intentar LanceDB (si el modelo aún está cargando, devuelve None y se usa FTS5)
+    collection = obtener_coleccion(esperar=False)
     if collection is not None:
         try:
             res = collection.search(query).limit(top_k).to_list()
