@@ -41,6 +41,10 @@ async def registrar_actividad(
     """
     if fotos is None:
         fotos = []
+    else:
+        # Sanitizar para evitar path traversal: almacenar solo el nombre base seguro
+        from pathlib import Path
+        fotos = [Path(f).name for f in fotos if f and str(f).strip()]
         
     # Verificar y asegurar la categoría
     await agregar_categoria(categoria)

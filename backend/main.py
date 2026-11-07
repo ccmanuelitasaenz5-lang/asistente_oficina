@@ -146,24 +146,29 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Auth opcional: si API_KEY está definida en .env, protege todas las rutas /api/*
+# Auth opcional / configurable: si API_KEY está definida en .env, protege rutas /api/* y documentos sensibles
 @app.middleware("http")
 async def auth_middleware(request: Request, call_next):
-    # Normalizar ruta para evitar bypass con barras dobles (//), /./, etc.
+    # Preflight de CORS nunca debe requerir autenticación
+    if request.method == "OPTIONS":
+        return await call_next(request)
+
+    # Normalizar ruta para evitar bypass con barras dobles (//), /./ y mayúsculas en Windows
     raw_path = request.url.path
     collapsed_path = re.sub(r"/+", "/", raw_path)
     norm_path = posixpath.normpath(collapsed_path)
+    norm_path_lower = norm_path.lower()
     
     necesita_auth = False
     
     if API_KEY:
-        if norm_path.startswith("/api/") and norm_path != "/api/status":
+        if norm_path_lower.startswith("/api/") and norm_path_lower != "/api/status":
             necesita_auth = True
         elif (
-            norm_path.startswith("/cartas")
-            or norm_path.startswith("/informes")
-            or norm_path.startswith("/media/actas")
-            or "/actas/" in norm_path
+            norm_path_lower.startswith("/cartas")
+            or norm_path_lower.startswith("/informes")
+            or norm_path_lower.startswith("/media/actas")
+            or "/actas/" in norm_path_lower
         ):
             necesita_auth = True
             
@@ -173,19 +178,22 @@ async def auth_middleware(request: Request, call_next):
         token = auth_header[7:].strip() if auth_header.startswith("Bearer ") else token_param.strip()
         
         if not token or not hmac.compare_digest(token.encode("utf-8"), API_KEY.encode("utf-8")):
-            return JSONResponse(status_code=401, content={"detail": "API Key inválida o ausente"})
+            return JSONResponse(
+                status_code=401, 
+                content={"detail": "API Key inválida o ausente"}
+            )
             
     return await call_next(request)
+
+# Asegurar carpetas antes de montar StaticFiles (previene RuntimeError si no existen)
+MEDIA_PATH.mkdir(parents=True, exist_ok=True)
+INFORMES_PATH.mkdir(parents=True, exist_ok=True)
+CARTAS_PATH.mkdir(parents=True, exist_ok=True)
 
 # Servir archivos generados e imágenes
 app.mount("/media", StaticFiles(directory=str(MEDIA_PATH)), name="media")
 app.mount("/informes", StaticFiles(directory=str(INFORMES_PATH)), name="informes")
 app.mount("/cartas", StaticFiles(directory=str(CARTAS_PATH)), name="cartas")
-
-# Asegurar carpetas
-MEDIA_PATH.mkdir(parents=True, exist_ok=True)
-INFORMES_PATH.mkdir(parents=True, exist_ok=True)
-CARTAS_PATH.mkdir(parents=True, exist_ok=True)
 
 # Registrar routers adicionales
 app.include_router(padron_router)
@@ -385,7 +393,12 @@ async def put_activity(act_id: int, act: EditarActividad):
 async def upload_activity_photo(file: UploadFile = File(...)):
     """Sube una foto de actividad y retorna la ruta local."""
     import uuid
+    import io
+    from PIL import Image
     
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="Nombre de archivo inválido")
+
     MAX_SIZE = 10 * 1024 * 1024  # 10MB
     ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
     
@@ -395,14 +408,26 @@ async def upload_activity_photo(file: UploadFile = File(...)):
     
     content = await file.read()
     if len(content) > MAX_SIZE:
-        raise HTTPException(status_code=400, detail=f"Archivo demasiado grande (máx 10MB)")
+        raise HTTPException(status_code=400, detail="Archivo demasiado grande (máx 10MB)")
+        
+    # Verificar que el contenido sea realmente una imagen válida
+    def _verificar_imagen(raw_bytes: bytes) -> bool:
+        try:
+            with Image.open(io.BytesIO(raw_bytes)) as img:
+                img.verify()
+            return True
+        except Exception:
+            return False
+
+    es_valida = await asyncio.to_thread(_verificar_imagen, content)
+    if not es_valida:
+        raise HTTPException(status_code=400, detail="El archivo no es una imagen válida o está dañado")
     
     unique_id = uuid.uuid4().hex[:6]
     filename = f"web_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{unique_id}{ext}"
     filepath = MEDIA_PATH / filename
     
-    with open(filepath, "wb") as buffer:
-        buffer.write(content)
+    await asyncio.to_thread(filepath.write_bytes, content)
         
     return {
         "filepath": f"media/{filename}",

@@ -431,8 +431,9 @@ def _parsear_con_ps(linea: str) -> dict | None:
         resto = nombre_resto + " " + resto[m_concat.end():].strip()
         resto = resto.strip()
         # Buscar prefijo de operadora dentro de los dígitos
-        m_op = re.search(r'(414|416|424|412|426|422)', digitos)
-        if m_op:
+        # Solo hacer match si la cédula tiene al menos 7 dígitos antes del prefijo
+        m_op = re.search(r'(0?(?:414|416|424|412|426|422))', digitos)
+        if m_op and m_op.start() >= 7:
             cedula = _limpiar_cedula(digitos[:m_op.start()])
             telefono = digitos[m_op.start():]
         else:
@@ -487,8 +488,9 @@ def _parsear_sin_ps(linea: str, nombre_seccion: str) -> dict | None:
         digitos = m_concat.group(1)
         resto = resto[:m_concat.start()].strip() + " " + resto[m_concat.end():].strip()
         resto = resto.strip()
-        m_op = re.search(r'(414|416|424|412|426|422)', digitos)
-        if m_op:
+        # Solo hacer match si la cédula tiene al menos 7 dígitos antes del prefijo
+        m_op = re.search(r'(0?(?:414|416|424|412|426|422))', digitos)
+        if m_op and m_op.start() >= 7:
             cedula = _limpiar_cedula(digitos[:m_op.start()])
             telefono = digitos[m_op.start():]
         else:
@@ -510,12 +512,12 @@ def _parsear_sin_ps(linea: str, nombre_seccion: str) -> dict | None:
         votos = m_votos.group(1)
         resto = resto[:m_votos.start()].strip()
 
-    # Extraer teléfono
-    telefono = ""
-    m_tel = re.search(r'\b(\d{9,12})\b', resto)
-    if m_tel:
-        telefono = _limpiar_telefono(m_tel.group(1))
-        resto = (resto[:m_tel.start()] + resto[m_tel.end():]).strip()
+    # Extraer teléfono suelto (solo si no se extrajo ya de los dígitos corridos)
+    if not telefono:
+        m_tel = re.search(r'\b(\d{9,12})\b', resto)
+        if m_tel:
+            telefono = _limpiar_telefono(m_tel.group(1))
+            resto = (resto[:m_tel.start()] + resto[m_tel.end():]).strip()
 
     nombre = _limpiar_nombre(re.sub(r'\s+', ' ', resto).strip())
 

@@ -2,32 +2,45 @@
 .env
 credentials.json
 credentials/*.json
+token.json
+AUDITORIA_*.md
 
-# Databases
+# Databases & Vector Store
 *.db
+*.db-wal
+*.db-shm
 *.sqlite
 *.sqlite3
+chroma_db/
+chroma_db_lancedb/
 
-# Virtual environment
+# Virtual environment & duplicates
 venv/
+venv_roto/
 venv_old/
+asistente_oficina/
 __pycache__/
 *.pyc
 
 # Generated / media files
 media/actas/*
 media/photos/*
+media/web_*
 informes/*
 cartas/*
+cartas_generadas/*
+informes_generados/*
 !media/actas/.gitkeep
 !media/photos/.gitkeep
 !informes/.gitkeep
 !cartas/.gitkeep
 
-# Backups / zips
+# Backups / zips / patches
 *.zip
 *.gz
 *.rar
+*.patch
+Soprte auditorias/
 
 # IDE
 .idea/
@@ -39,5 +52,13 @@ cartas/*
 Thumbs.db
 .DS_Store
 
+# Local scratch / utility scripts
+_backup_to_github.ps1
+check_existence.ps1
+move_items.ps1
+aplicar_carga_diferida.py
+aplicar_tiempos_arranque.py
+
 # Logs
 *.log
+*.log.*

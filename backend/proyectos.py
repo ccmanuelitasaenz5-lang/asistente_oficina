@@ -1,5 +1,6 @@
 import logging
 import io
+import asyncio
 from typing import List, Optional
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, Query, UploadFile, File
@@ -66,7 +67,9 @@ async def listar_proyectos(
     transformacion: Optional[str] = Query(None),
     estado: Optional[str] = Query(None),
     comision_id: Optional[int] = Query(None),
-    consejo_id: Optional[int] = Query(None)
+    consejo_id: Optional[int] = Query(None),
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0)
 ):
     """Lista los proyectos de la Agenda Concreta de Acción (ACA)."""
     async with await get_db() as db:
@@ -95,7 +98,9 @@ async def listar_proyectos(
             LEFT JOIN consejos_comunales cc ON p.consejo_id = cc.id
             {where_clause}
             ORDER BY p.id DESC
+            LIMIT ? OFFSET ?
         """
+        params.extend([limit, offset])
         cursor = await db.execute(sql, tuple(params))
         rows = await cursor.fetchall()
         return [dict(r) for r in rows]
@@ -359,66 +364,74 @@ async def actualizar_avance(proyecto_id: int, req: ActualizarAvanceRequest):
         return {"status": "success", "message": "Avance de proyecto actualizado"}
 
 
+def _extraer_matriz_docx_sync(docx_bytes: bytes) -> List[dict]:
+    """Extrae las filas de la tabla de la Matriz ACA síncronamente."""
+    import docx
+    doc = docx.Document(io.BytesIO(docx_bytes))
+    filas_extraidas = []
+    transformacion_actual = "1T. Transformación Económica"
+
+    for table in doc.tables:
+        for row in table.rows:
+            celdas = [cell.text.strip().replace("\n", " ") for cell in row.cells]
+            if not any(celdas):
+                continue
+
+            texto_primera = celdas[0]
+
+            # Detectar encabezado de transformación
+            for num_t in ["1T", "2T", "3T", "4T", "5T", "6T", "7T"]:
+                if num_t in texto_primera.upper():
+                    transformacion_actual = texto_primera[:100]
+                    break
+
+            # Si es fila de datos (tiene al menos 5 columnas y no es encabezado repetido)
+            if len(celdas) >= 6 and "TRANSFORMACIÓN" not in celdas[0].upper() and "PROBLEMA" not in celdas[1].upper():
+                voceria = celdas[1] if len(celdas) > 1 else ""
+                nudo = celdas[2] if len(celdas) > 2 else ""
+                potencial = celdas[3] if len(celdas) > 3 else ""
+                accion = celdas[4] if len(celdas) > 4 else ""
+                requerimiento = celdas[5] if len(celdas) > 5 else ""
+                tiempo = celdas[6] if len(celdas) > 6 else "Corto Plazo"
+
+                if any([nudo, accion, requerimiento]):
+                    filas_extraidas.append({
+                        "transformacion_7t": transformacion_actual,
+                        "voceria_vinculada": voceria,
+                        "nudo_critico": nudo,
+                        "potencialidades": potencial,
+                        "accion_ejecutar": accion or nudo,
+                        "requerimiento": requerimiento,
+                        "tiempo_ejecucion": tiempo or "Corto Plazo",
+                        "nombre": accion or nudo
+                    })
+    return filas_extraidas
+
+
 @router.post("/importar-docx")
 async def importar_matriz_docx(file: UploadFile = File(...)):
     """
     Importa y extrae automáticamente las filas de la Matriz ACA (7T)
     desde un archivo Microsoft Word (.docx). Retorna la lista extraída para revisión.
     """
-    if not file.filename.lower().endswith(".docx"):
+    if not file.filename or not file.filename.lower().endswith(".docx"):
         raise HTTPException(status_code=400, detail="El archivo debe tener extensión .docx")
 
     try:
-        import docx
         MAX_DOCX_SIZE = 20 * 1024 * 1024  # 20 MB
         contents = await file.read()
         if len(contents) > MAX_DOCX_SIZE:
             raise HTTPException(status_code=400, detail="El archivo Word excede el tamaño máximo permitido (20 MB)")
-        doc = docx.Document(io.BytesIO(contents))
-        filas_extraidas = []
-
-        transformacion_actual = "1T. Transformación Económica"
-
-        for table in doc.tables:
-            for row in table.rows:
-                celdas = [cell.text.strip().replace("\n", " ") for cell in row.cells]
-                if not any(celdas):
-                    continue
-
-                texto_primera = celdas[0]
-
-                # Detectar encabezado de transformación
-                for num_t in ["1T", "2T", "3T", "4T", "5T", "6T", "7T"]:
-                    if num_t in texto_primera.upper():
-                        transformacion_actual = texto_primera[:100]
-                        break
-
-                # Si es fila de datos (tiene al menos 5 columnas y no es encabezado repetido)
-                if len(celdas) >= 6 and "TRANSFORMACIÓN" not in celdas[0].upper() and "PROBLEMA" not in celdas[1].upper():
-                    voceria = celdas[1] if len(celdas) > 1 else ""
-                    nudo = celdas[2] if len(celdas) > 2 else ""
-                    potencial = celdas[3] if len(celdas) > 3 else ""
-                    accion = celdas[4] if len(celdas) > 4 else ""
-                    requerimiento = celdas[5] if len(celdas) > 5 else ""
-                    tiempo = celdas[6] if len(celdas) > 6 else "Corto Plazo"
-
-                    if any([nudo, accion, requerimiento]):
-                        filas_extraidas.append({
-                            "transformacion_7t": transformacion_actual,
-                            "voceria_vinculada": voceria,
-                            "nudo_critico": nudo,
-                            "potencialidades": potencial,
-                            "accion_ejecutar": accion or nudo,
-                            "requerimiento": requerimiento,
-                            "tiempo_ejecucion": tiempo or "Corto Plazo",
-                            "nombre": accion or nudo
-                        })
+        
+        filas_extraidas = await asyncio.to_thread(_extraer_matriz_docx_sync, contents)
 
         return {
             "status": "success",
             "total_extraidos": len(filas_extraidas),
             "proyectos": filas_extraidas
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error procesando docx: {e}")
         raise HTTPException(status_code=422, detail="Error al leer el archivo Word .docx. Verifique el formato de tablas del documento.")

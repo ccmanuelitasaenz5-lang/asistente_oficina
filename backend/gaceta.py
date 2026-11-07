@@ -1,5 +1,6 @@
 import logging
 import html
+import asyncio
 from typing import List, Optional
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, Query
@@ -247,12 +248,15 @@ async def generar_pdf_gaceta(gaceta_id: int):
     </html>
     """
 
-    try:
+    def _renderizar_gaceta_pdf_sync(html_str: str, out_path: Path) -> bool:
         from xhtml2pdf import pisa
-        with open(pdf_filepath, "w+b") as result_file:
-            pisa_status = pisa.CreatePDF(html_content, dest=result_file, encoding='utf-8')
-        
-        if pisa_status.err:
+        with open(out_path, "w+b") as result_file:
+            pisa_status = pisa.CreatePDF(html_str, dest=result_file, encoding='utf-8')
+        return not pisa_status.err
+
+    try:
+        exito = await asyncio.to_thread(_renderizar_gaceta_pdf_sync, html_content, pdf_filepath)
+        if not exito:
             raise HTTPException(status_code=500, detail="Error al generar el PDF de la Gaceta")
 
         # Guardar ruta en BD
@@ -265,6 +269,8 @@ async def generar_pdf_gaceta(gaceta_id: int):
             "pdf_url": f"/informes/{nombre_archivo}",
             "pdf_path": str(pdf_filepath)
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error generando PDF de gaceta: {e}")
         raise HTTPException(status_code=500, detail="Error interno al generar el PDF de la Gaceta Comunal")

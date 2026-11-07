@@ -1,3 +1,6 @@
+import re
+import uuid
+import asyncio
 import logging
 import shutil
 from datetime import datetime
@@ -28,14 +31,19 @@ async def upload_acta(file: UploadFile = File(...)):
     if len(content) > MAX_PDF_SIZE:
         raise HTTPException(status_code=400, detail="El archivo excede el tamaño máximo permitido (25 MB)")
 
-    # Sanitizar nombre para evitar path traversal
-    safe_name = Path(file.filename).name
+    # Validar magic bytes de PDF (%PDF-)
+    if not content.startswith(b"%PDF-"):
+        raise HTTPException(status_code=400, detail="El contenido del archivo no es un documento PDF válido.")
+
+    # Sanitizar nombre seguro con UUID para evitar colisiones y caracteres inválidos en NTFS
+    safe_name = re.sub(r'[^a-zA-Z0-9_\.-]', '_', Path(file.filename).name)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"acta_{timestamp}_{safe_name}"
+    unique_suffix = uuid.uuid4().hex[:6]
+    filename = f"acta_{timestamp}_{unique_suffix}_{safe_name}"
     pdf_path = ACTAS_DIR / filename
 
-    with open(pdf_path, "wb") as f:
-        f.write(content)
+    # Escribir sin bloquear el event loop
+    await asyncio.to_thread(pdf_path.write_bytes, content)
 
     # Extraer datos
     try:

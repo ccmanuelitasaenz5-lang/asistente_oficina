@@ -1,4 +1,5 @@
 import os
+import uuid
 import logging
 import json
 from pathlib import Path
@@ -290,17 +291,18 @@ async def recibir_mensaje_foto(update: Update, context: ContextTypes.DEFAULT_TYP
     await update.message.reply_chat_action("upload_photo")
     
     try:
-        # Descargar foto de mayor resolución
+        # Descargar foto de mayor resolución con sufijo único anti-colisión
         photo_file = await update.message.photo[-1].get_file()
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        foto_nombre = f"img_{timestamp}.jpg"
+        unique_suffix = uuid.uuid4().hex[:6]
+        foto_nombre = f"img_{timestamp}_{unique_suffix}.jpg"
         foto_ruta = MEDIA_PATH / foto_nombre
         
         await photo_file.download_to_drive(str(foto_ruta))
         logger.info(f"Imagen descargada de Telegram en: {foto_ruta}")
         
         # Registrar como actividad
-        resultado = await registrar_actividad_inteligente(texto, fotos=[str(foto_ruta.resolve())])
+        resultado = await registrar_actividad_inteligente(texto, fotos=[foto_nombre])
         await update.message.reply_text(resultado, parse_mode="Markdown")
     except Exception as e:
         logger.error(f"Error procesando foto recibida: {e}")

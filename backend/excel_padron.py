@@ -8,6 +8,7 @@ Genera un archivo .xlsx del padrón completo de voceros con:
 """
 
 import re
+import asyncio
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -69,8 +70,10 @@ async def _obtener_datos_padron() -> dict:
 def _celda(ws, fila, col, valor,
            negrita=False, color_fondo=None, color_fuente="000000",
            tamaño=10, alineacion="left", borde=False):
-    """Aplica valor y formato a una celda."""
+    """Aplica valor y formato a una celda, sanitizando contra inyección de fórmulas."""
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    if isinstance(valor, str) and valor and valor[0] in ('=', '+', '-', '@', '\t', '\r'):
+        valor = f"'{valor}"
     cell = ws.cell(row=fila, column=col, value=valor)
     cell.font = Font(name=FUENTE, bold=negrita, size=tamaño, color=color_fuente)
     if color_fondo:
@@ -247,19 +250,8 @@ def _hoja_consejo(wb, nombre_consejo: str, datos: dict, numero: int):
     ws.cell(row=fila_tot, column=6, value=f"Suplentes: {supl}").font   = Font(name=FUENTE, bold=True, size=9)
 
 
-async def exportar_padron_excel(output_path: Optional[Path] = None) -> bytes:
-    """
-    Genera el Excel del padrón completo.
-    Retorna bytes del archivo .xlsx para enviarlo desde FastAPI como StreamingResponse.
-    """
+def _generar_excel_bytes_sync(consejos: dict, fecha_gen: str) -> bytes:
     import openpyxl
-
-    fecha_gen     = datetime.now().strftime("%d/%m/%Y %H:%M")
-    consejos      = await _obtener_datos_padron()
-
-    if not consejos:
-        raise ValueError("No hay voceros registrados en el padrón para exportar.")
-
     wb = openpyxl.Workbook()
     _hoja_resumen(wb, consejos, fecha_gen)
 
@@ -274,7 +266,21 @@ async def exportar_padron_excel(output_path: Optional[Path] = None) -> bytes:
     buffer = BytesIO()
     wb.save(buffer)
     buffer.seek(0)
-    xlsx_bytes = buffer.read()
+    return buffer.read()
+
+
+async def exportar_padron_excel(output_path: Optional[Path] = None) -> bytes:
+    """
+    Genera el Excel del padrón completo.
+    Retorna bytes del archivo .xlsx para enviarlo desde FastAPI como StreamingResponse.
+    """
+    fecha_gen     = datetime.now().strftime("%d/%m/%Y %H:%M")
+    consejos      = await _obtener_datos_padron()
+
+    if not consejos:
+        raise ValueError("No hay voceros registrados en el padrón para exportar.")
+
+    xlsx_bytes = await asyncio.to_thread(_generar_excel_bytes_sync, consejos, fecha_gen)
 
     if output_path:
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)

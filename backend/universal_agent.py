@@ -390,134 +390,166 @@ def _build_voceros_query_corregida(
 @cache_query(VOCEROS_CACHE)
 async def _buscar_voceros(query: str) -> list:
     """
-    Versión optimizada FASE 1:
-    - SQL con parámetros seguros (sin f-strings con valores de usuario)
-    - Usa las funciones auxiliares _extract_keywords_voceros y 
-      _build_voceros_query_corregida
-    - NOTA: Cache LRU y timeout se agregarán en FASE 2
+    Buscador optimizado y robusto de voceros:
+    1. Carga dinámica de consejos comunales desde la BD (evita listas fijas obsoletas).
+    2. Insensible a tildes y mayúsculas.
+    3. Si se especifica un consejo y un cargo/término, filtra específicamente por ambos.
+    4. Búsqueda por palabras clave individuales (AND) para personas y cargos.
+    5. Priorización inteligente de resultados por coincidencia exacta antes de ordenar.
     """
     resultados = []
     q_lower = query.lower()
+    q_norm = _normalizar(q_lower)
     unidad_pedida = _get_unidad_desde_query(q_lower)
 
     try:
         from backend.database import get_db
         async with await get_db() as db:
-            # Buscar por consejo conocido primero
-            CONSEJOS_CONOCIDOS = [
-                "la inmaculada", "barrio bolivar", "divino niño", "la esperanza",
-                "la victoria", "manuelita saenz", "pablo rosales", "sur america",
-                "suramerica"
-            ]
-            q_normalizada = _normalizar(q_lower)
-            consejo_en_query = None
-            for c in CONSEJOS_CONOCIDOS:
-                if _normalizar(c) in q_normalizada:
-                    consejo_en_query = c
+            # 1. Obtener consejos comunales reales desde la BD
+            cur_c = await db.execute("SELECT id, nombre FROM consejos_comunales")
+            consejos_db = await cur_c.fetchall()
+            
+            consejo_id_en_query = None
+            consejo_nombre_en_query = None
+            
+            # Buscar coincidencia del consejo en la query (normalizado sin tildes)
+            for c_id, c_nom in sorted(consejos_db, key=lambda x: len(x[1]), reverse=True):
+                c_nom_norm = _normalizar(c_nom)
+                # Casos especiales de aliases comunes (ej: sur america / suramerica)
+                if c_nom_norm in q_norm or (c_nom_norm == "sur america" and "suramerica" in q_norm):
+                    consejo_id_en_query = c_id
+                    consejo_nombre_en_query = c_nom
                     break
 
-            rows = []
+            # 2. Extraer términos significativos de búsqueda (excluyendo el nombre del consejo y stopwords)
+            stopwords_voceros = {
+                "los", "las", "del", "de", "la", "el", "en", "un", "una",
+                "y", "e", "o", "al", "con", "por", "que", "cuáles", "cuales",
+                "son", "voceros", "vocero", "vocera", "voceras", "consejo",
+                "comunal", "cuántos", "cuantos", "cual", "cuál", "dónde",
+                "donde", "cómo", "como", "quién", "quien", "quiénes", "quienes",
+                "dame", "busca", "buscar", "muestra", "mostrar", "informacion",
+                "datos", "contacto", "telefono", "cedula", "todos", "todas"
+            }
+            
+            q_limpia = q_norm
+            if consejo_nombre_en_query:
+                q_limpia = q_limpia.replace(_normalizar(consejo_nombre_en_query), " ")
+                if _normalizar(consejo_nombre_en_query) == "sur america":
+                    q_limpia = q_limpia.replace("suramerica", " ")
+                    
+            terminos_busqueda = [
+                w for w in re.findall(r'[a-zA-Z0-9áéíóúñÁÉÍÓÚÑ]+', q_limpia)
+                if len(w) > 2 and _normalizar(w) not in stopwords_voceros
+            ]
 
-            if consejo_en_query and unidad_pedida:
-                # Buscar voceros del consejo Y que pertenezcan a esa unidad
+            # 3. Construir consulta SQL según el contexto
+            where_clauses = ["v.activo = 1"]
+            params = []
+
+            if consejo_id_en_query:
+                where_clauses.append("v.consejo_id = ?")
+                params.append(consejo_id_en_query)
+
+            # Filtro por unidad (si aplica)
+            if unidad_pedida:
                 if unidad_pedida == "Ejecutiva":
-                    cursor = await db.execute(
-                        """
-                        SELECT v.nombre, v.cedula, v.cargo, v.tipo, v.telefono, v.votos,
-                               c.nombre as consejo_nombre, a.fecha_acta, a.pdf_path
-                        FROM voceros v
-                        LEFT JOIN consejos_comunales c ON v.consejo_id = c.id
-                        LEFT JOIN actas a ON v.acta_id = a.id
-                        WHERE v.activo = 1
-                          AND LOWER(c.nombre) LIKE ?
-                          AND LOWER(v.cargo) NOT LIKE ?
-                          AND LOWER(v.cargo) NOT LIKE ?
-                          AND LOWER(v.cargo) NOT LIKE ?
-                          AND LOWER(v.cargo) NOT LIKE ?
-                          AND LOWER(v.cargo) NOT LIKE ?
-                        ORDER BY v.nombre
-                        LIMIT 50
-                        """,
-                        (f"%{consejo_en_query}%", "%contralor%", "%financier%",
-                         "%administrat%", "%legislaci%", "%electoral%"),
-                    )
-                    rows = await cursor.fetchall()
-                else:
-                    # Usar la función auxiliar para construir el SQL seguro
-                    sql, params = _build_voceros_query_corregida(q_lower, unidad_pedida, [])
-                    # Filtrar además por consejo
-                    sql_con_consejo = sql.replace(
-                        "WHERE v.activo = 1",
-                        "WHERE v.activo = 1 AND LOWER(c.nombre) LIKE ?"
-                    )
-                    params_con_consejo = tuple([f"%{consejo_en_query}%"] + list(params))
-                    cursor = await db.execute(sql_con_consejo, params_con_consejo)
-                    rows = await cursor.fetchall()
+                    where_clauses.append("""(
+                        LOWER(v.cargo) NOT LIKE '%contralor%'
+                        AND LOWER(v.cargo) NOT LIKE '%financier%'
+                        AND LOWER(v.cargo) NOT LIKE '%administrat%'
+                        AND LOWER(v.cargo) NOT LIKE '%legislaci%'
+                        AND LOWER(v.cargo) NOT LIKE '%electoral%'
+                    )""")
+                elif unidad_pedida == "Contraloría Social":
+                    where_clauses.append("LOWER(v.cargo) LIKE '%contralor%'")
+                elif unidad_pedida == "Administración y Finanzas":
+                    where_clauses.append("(LOWER(v.cargo) LIKE '%financier%' OR LOWER(v.cargo) LIKE '%administrat%')")
+                elif unidad_pedida == "Legislativa":
+                    where_clauses.append("(LOWER(v.cargo) LIKE '%legislaci%' OR LOWER(v.cargo) LIKE '%electoral%')")
 
-            elif consejo_en_query:
-                cursor = await db.execute(
+            # Filtro por términos específicos (nombre, cargo, cédula)
+            for t in terminos_busqueda:
+                t_sin_tilde = _normalizar(t)
+                where_clauses.append("""(
+                    LOWER(v.nombre) LIKE ? 
+                    OR LOWER(v.cargo) LIKE ? 
+                    OR LOWER(v.cedula) LIKE ?
+                    OR LOWER(v.nombre) LIKE ?
+                    OR LOWER(v.cargo) LIKE ?
+                )""")
+                params.extend([f"%{t}%", f"%{t}%", f"%{t}%", f"%{t_sin_tilde}%", f"%{t_sin_tilde}%"])
+
+            where_sql = " AND ".join(where_clauses)
+            
+            # Ordenar priorizando coincidencia de cargo y principales
+            order_sql = "CASE WHEN v.tipo = 'Principal' THEN 0 ELSE 1 END, v.nombre"
+            if terminos_busqueda:
+                primer_termino = f"%{terminos_busqueda[0]}%"
+                order_sql = f"""CASE 
+                    WHEN LOWER(v.cargo) LIKE '{primer_termino}' THEN 0
+                    WHEN LOWER(v.nombre) LIKE '{primer_termino}' THEN 1
+                    ELSE 2 
+                END, {order_sql}"""
+
+            sql = f"""
+            SELECT v.nombre, v.cedula, v.cargo, v.tipo, v.telefono, v.votos,
+                   c.nombre as consejo_nombre, a.fecha_acta, a.pdf_path
+            FROM voceros v
+            LEFT JOIN consejos_comunales c ON v.consejo_id = c.id
+            LEFT JOIN actas a ON v.acta_id = a.id
+            WHERE {where_sql}
+            ORDER BY {order_sql}
+            LIMIT 50
+            """
+            
+            cursor = await db.execute(sql, tuple(params))
+            rows = await cursor.fetchall()
+
+            # Si no hubo resultados con todos los términos juntos, intentar con búsqueda OR suave
+            if not rows and len(terminos_busqueda) > 1:
+                where_or = ["v.activo = 1"]
+                params_or = []
+                if consejo_id_en_query:
+                    where_or.append("v.consejo_id = ?")
+                    params_or.append(consejo_id_en_query)
+                
+                condiciones_terminos = []
+                for t in terminos_busqueda:
+                    condiciones_terminos.append("(LOWER(v.nombre) LIKE ? OR LOWER(v.cargo) LIKE ?)")
+                    t_norm = _normalizar(t)
+                    params_or.extend([f"%{t_norm}%", f"%{t_norm}%"])
+                
+                where_or.append(f"({' OR '.join(condiciones_terminos)})")
+                sql_or = f"""
+                SELECT v.nombre, v.cedula, v.cargo, v.tipo, v.telefono, v.votos,
+                       c.nombre as consejo_nombre, a.fecha_acta, a.pdf_path
+                FROM voceros v
+                LEFT JOIN consejos_comunales c ON v.consejo_id = c.id
+                LEFT JOIN actas a ON v.acta_id = a.id
+                WHERE {' AND '.join(where_or)}
+                ORDER BY {order_sql}
+                LIMIT 50
+                """
+                cursor_or = await db.execute(sql_or, tuple(params_or))
+                rows = await cursor_or.fetchall()
+
+            # Fallback solo si se pidió un consejo pero ningún término específico
+            if not rows and consejo_id_en_query and not terminos_busqueda:
+                cursor_fall = await db.execute(
                     """
                     SELECT v.nombre, v.cedula, v.cargo, v.tipo, v.telefono, v.votos,
                            c.nombre as consejo_nombre, a.fecha_acta, a.pdf_path
                     FROM voceros v
                     LEFT JOIN consejos_comunales c ON v.consejo_id = c.id
                     LEFT JOIN actas a ON v.acta_id = a.id
-                    WHERE v.activo = 1
-                      AND LOWER(c.nombre) LIKE ?
+                    WHERE v.activo = 1 AND v.consejo_id = ?
                     ORDER BY v.nombre
                     LIMIT 60
                     """,
-                    (f"%{consejo_en_query}%",),
+                    (consejo_id_en_query,)
                 )
-                rows = await cursor.fetchall()
-
-            elif unidad_pedida:
-                # Solo por unidad (sin consejo específico)
-                palabras_clave = _extract_keywords_voceros(query)
-                sql, params = _build_voceros_query_corregida(q_lower, unidad_pedida, palabras_clave)
-                cursor = await db.execute(sql, params)
-                rows = await cursor.fetchall()
-
-            # Estrategia 2: Búsqueda por texto libre
-            if not rows:
-                palabras = _extract_keywords_voceros(query)
-                if palabras:
-                    kw = f"%{' '.join(palabras)}%"
-                    cursor = await db.execute(
-                        """
-                        SELECT v.nombre, v.cedula, v.cargo, v.tipo, v.telefono, v.votos,
-                               c.nombre as consejo_nombre, a.fecha_acta, a.pdf_path
-                        FROM voceros v
-                        LEFT JOIN consejos_comunales c ON v.consejo_id = c.id
-                        LEFT JOIN actas a ON v.acta_id = a.id
-                        WHERE v.activo = 1
-                          AND (
-                            LOWER(v.nombre)   LIKE ?
-                            OR LOWER(v.cedula) LIKE ?
-                            OR LOWER(v.cargo)  LIKE ?
-                            OR LOWER(c.nombre) LIKE ?
-                          )
-                        LIMIT 50
-                        """,
-                        (kw, kw, kw, kw),
-                    )
-                    rows = await cursor.fetchall()
-
-            # Estrategia 3: Fallback – todos los voceros
-            if not rows:
-                cursor = await db.execute(
-                    """
-                    SELECT v.nombre, v.cedula, v.cargo, v.tipo, v.telefono, v.votos,
-                           c.nombre as consejo_nombre, a.fecha_acta, a.pdf_path
-                    FROM voceros v
-                    LEFT JOIN consejos_comunales c ON v.consejo_id = c.id
-                    LEFT JOIN actas a ON v.acta_id = a.id
-                    WHERE v.activo = 1
-                    ORDER BY c.nombre, v.nombre
-                    LIMIT 100
-                    """
-                )
-                rows = await cursor.fetchall()
+                rows = await cursor_fall.fetchall()
 
             for r in rows:
                 resultados.append({

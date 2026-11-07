@@ -1,5 +1,6 @@
 import html
 import os
+import asyncio
 import logging
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -275,6 +276,18 @@ def generar_grafico_estadisticas(actividades: list, filename: str) -> str:
     # Retornar una URL relativa para que el servidor web la sirva
     return f"/media/{filename}"
 
+def _renderizar_pdf_sync(html_content: str, dest_path: Path) -> bool:
+    """Función síncrona CPU-bound para renderizar el PDF sin bloquear el event loop."""
+    from xhtml2pdf import pisa
+    with open(dest_path, "w+b") as result_file:
+        pisa_status = pisa.CreatePDF(
+            html_content,
+            dest=result_file,
+            encoding='utf-8'
+        )
+    return not pisa_status.err
+
+
 async def generar_informe_pdf(periodo: str) -> dict:
     """
     Genera un informe consolidado en PDF para un periodo específico.
@@ -328,7 +341,7 @@ async def generar_informe_pdf(periodo: str) -> dict:
                 f_obj = datetime.strptime(act["fecha"], "%Y-%m-%d")
                 fecha_formato = f_obj.strftime("%d/%m/%Y")
             except Exception:
-                fecha_formato = act["fecha"]
+                fecha_formato = html.escape(str(act.get("fecha") or ""))
                 
             cat_esc = html.escape(str(act.get('categoria') or ''))
             desc_esc = html.escape(str(act.get('descripcion') or '')).replace('\n', '<br>')
@@ -374,16 +387,9 @@ async def generar_informe_pdf(periodo: str) -> dict:
     pdf_filepath = INFORMES_PATH / nombre_archivo
     
     try:
-        from xhtml2pdf import pisa
-        with open(pdf_filepath, "w+b") as result_file:
-            pisa_status = pisa.CreatePDF(
-                html_informe,
-                dest=result_file,
-                encoding='utf-8'
-            )
-        
-        if pisa_status.err:
-            logger.error(f"Error interno xhtml2pdf: {pisa_status.err}")
+        exito = await asyncio.to_thread(_renderizar_pdf_sync, html_informe, pdf_filepath)
+        if not exito:
+            logger.error("Error interno xhtml2pdf al compilar el informe.")
             pdf_path_str = ""
         else:
             logger.info(f"Informe PDF generado en: {pdf_filepath}")

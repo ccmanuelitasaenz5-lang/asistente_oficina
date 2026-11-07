@@ -1,4 +1,6 @@
 import os
+import html
+import asyncio
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -334,7 +336,7 @@ async def crear_y_guardar_carta(
     # 3. Redactar el cuerpo con IA
     contenido = await redactar_carta_ai(tipo, destinatario, asunto, instrucciones)
     
-    # 4. Formatear la plantilla HTML
+    # 4. Formatear la plantilla HTML (con escape para prevenir inyecciones)
     fecha_actual_legible = datetime.now().strftime("%d de %B de %Y")
     meses = {
         "January": "Enero", "February": "Febrero", "March": "Marzo", "April": "Abril",
@@ -348,20 +350,25 @@ async def crear_y_guardar_carta(
     if COMUNA_INFO['municipio']:
         ubicacion = f"Mun. {COMUNA_INFO['municipio']}, {ubicacion}"
         
+    contenido_html = "<br><br>".join(
+        html.escape(p).replace("\n", "<br>") 
+        for p in contenido.split("\n\n") if p.strip()
+    ) or html.escape(contenido).replace("\n", "<br>")
+
     html_content = PLANTILLA_CARTA_HTML.format(
-        comuna_nombre=COMUNA_INFO["nombre"],
-        comuna_ubicacion=ubicacion,
-        comuna_rif=COMUNA_INFO["rif"] or "G-20000000-0",
-        comuna_email=COMUNA_INFO["email"],
-        fecha=fecha_actual_legible,
-        numero_oficio=numero_oficio,
-        destinatario=destinatario,
-        cargo_destinatario=cargo_destinatario or "Ciudadano(a)",
-        asunto=asunto,
-        contenido=contenido,
-        firma_nombre=vocero_nombre,
-        firma_cargo=vocero_cargo,
-        firma_comuna=COMUNA_INFO["nombre"]
+        comuna_nombre=html.escape(COMUNA_INFO["nombre"]),
+        comuna_ubicacion=html.escape(ubicacion),
+        comuna_rif=html.escape(COMUNA_INFO["rif"] or "G-20000000-0"),
+        comuna_email=html.escape(COMUNA_INFO["email"] or ""),
+        fecha=html.escape(fecha_actual_legible),
+        numero_oficio=html.escape(numero_oficio),
+        destinatario=html.escape(destinatario),
+        cargo_destinatario=html.escape(cargo_destinatario or "Ciudadano(a)"),
+        asunto=html.escape(asunto),
+        contenido=contenido_html,
+        firma_nombre=html.escape(vocero_nombre),
+        firma_cargo=html.escape(vocero_cargo),
+        firma_comuna=html.escape(COMUNA_INFO["nombre"])
     )
     
     # 5. Guardar archivos: HTML fuente, PDF real, DOCX
@@ -370,10 +377,9 @@ async def crear_y_guardar_carta(
     pdf_filepath  = CARTAS_PATH / f"{nombre_base}.pdf"
     docx_filepath = CARTAS_PATH / f"{nombre_base}.docx"
     
-    # HTML (fuente de respaldo)
+    # HTML (fuente de respaldo, asíncrono)
     try:
-        with open(html_filepath, 'w', encoding='utf-8') as f:
-            f.write(html_content)
+        await asyncio.to_thread(html_filepath.write_text, html_content, encoding='utf-8')
     except Exception as e:
         logger.error(f"Error al guardar HTML fuente: {e}")
 
@@ -381,8 +387,9 @@ async def crear_y_guardar_carta(
     pdf_ok = await html_a_pdf(html_content, pdf_filepath)
     pdf_path_str = str(pdf_filepath.resolve()) if pdf_ok else str(html_filepath.resolve())
 
-    # DOCX mediante python-docx
-    carta_a_docx(
+    # DOCX mediante python-docx en hilo secundario (evita bloquear el event loop)
+    await asyncio.to_thread(
+        carta_a_docx,
         numero_oficio=numero_oficio,
         fecha=fecha_actual_legible,
         destinatario=destinatario,

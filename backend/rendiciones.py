@@ -30,7 +30,9 @@ class EstadoAprobacionRequest(BaseModel):
 async def listar_rendiciones(
     periodo: Optional[str] = Query(None),
     instancia_id: Optional[int] = Query(None),
-    comision_id: Optional[int] = Query(None)
+    comision_id: Optional[int] = Query(None),
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0)
 ):
     """Lista las rendiciones de cuentas con nombres de instancias y comisiones."""
     async with await get_db() as db:
@@ -57,7 +59,9 @@ async def listar_rendiciones(
             LEFT JOIN comisiones_gestion c ON r.comision_id = c.id
             {where_clause}
             ORDER BY r.fecha_rendicion DESC, r.id DESC
+            LIMIT ? OFFSET ?
         """
+        params.extend([limit, offset])
         cursor = await db.execute(sql, tuple(params))
         rows = await cursor.fetchall()
         return [dict(r) for r in rows]

@@ -343,6 +343,7 @@ async def init_db():
             "CREATE INDEX IF NOT EXISTS idx_tareas_fecha ON tareas(fecha_limite);",
             "CREATE INDEX IF NOT EXISTS idx_actas_consejo ON actas(consejo_id);",
             "CREATE INDEX IF NOT EXISTS idx_documentos_hash ON documentos(hash_archivo);",
+            "CREATE INDEX IF NOT EXISTS idx_conv_thread ON conversaciones(thread_id, id);",
         ]
         for idx in indices:
             try:
@@ -389,10 +390,13 @@ async def guardar_mensaje_chat(thread_id: str, role: str, content: str):
         await db.commit()
 
 async def obtener_historial_chat(thread_id: str, limit: int = 10) -> list:
-    """Recupera los últimos mensajes de una conversación."""
+    """Recupera los últimos mensajes de una conversación (los más recientes, en orden cronológico)."""
     async with await get_db() as db:
         cursor = await db.execute(
-            "SELECT role, content FROM conversaciones WHERE thread_id = ? ORDER BY timestamp ASC LIMIT ?",
+            """SELECT role, content FROM (
+                SELECT id, role, content FROM conversaciones
+                WHERE thread_id = ? ORDER BY id DESC LIMIT ?
+            ) sub ORDER BY id ASC""",
             (thread_id, limit)
         )
         rows = await cursor.fetchall()

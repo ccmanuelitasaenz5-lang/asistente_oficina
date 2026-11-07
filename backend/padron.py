@@ -223,69 +223,13 @@ async def estadisticas_padron():
 
 @router.get("/exportar-xlsx")
 async def exportar_padron_xlsx():
-    """Exporta el padrón completo (consejos y voceros) a un archivo Excel."""
+    """Exporta el padrón completo a un archivo Excel formateado."""
     try:
-        import openpyxl
-        from openpyxl.styles import Font, PatternFill, Alignment
-        from openpyxl.utils import get_column_letter
-
-        wb = openpyxl.Workbook()
-
-        # ─── Hoja 1: Consejos Comunales ───
-        ws1 = wb.active
-        ws1.title = "Consejos Comunales"
-        
-        headers_consejos = ["ID", "Nombre", "RIF", "Sector", "Fecha Constitución",
-                            "Vocero Coordinador", "Teléfono", "Email"]
-        header_fill = PatternFill("solid", fgColor="1a365d")
-        header_font = Font(color="FFFFFF", bold=True)
-        
-        for col, h in enumerate(headers_consejos, 1):
-            cell = ws1.cell(row=1, column=col, value=h)
-            cell.fill = header_fill
-            cell.font = header_font
-            cell.alignment = Alignment(horizontal="center")
-            ws1.column_dimensions[get_column_letter(col)].width = 20
-
-        async with await get_db() as db:
-            cursor = await db.execute(
-                "SELECT id, nombre, rif, sector, fecha_constitucion, vocero_coordinador, telefono, email FROM consejos_comunales WHERE activo=1 ORDER BY nombre"
-            )
-            rows = await cursor.fetchall()
-            for r, row in enumerate(rows, 2):
-                for c, val in enumerate(row, 1):
-                    ws1.cell(row=r, column=c, value=val)
-
-        # ─── Hoja 2: Voceros ───
-        ws2 = wb.create_sheet("Voceros")
-        
-        headers_voceros = ["ID", "Consejo", "Nombre", "Cédula", "Cargo", "Teléfono", "Email"]
-        for col, h in enumerate(headers_voceros, 1):
-            cell = ws2.cell(row=1, column=col, value=h)
-            cell.fill = header_fill
-            cell.font = header_font
-            cell.alignment = Alignment(horizontal="center")
-            ws2.column_dimensions[get_column_letter(col)].width = 22
-
-        async with await get_db() as db:
-            cursor = await db.execute(
-                """SELECT v.id, c.nombre, v.nombre, v.cedula, v.cargo, v.telefono, v.email
-                   FROM voceros v LEFT JOIN consejos_comunales c ON v.consejo_id = c.id
-                   WHERE v.activo=1 ORDER BY v.nombre"""
-            )
-            rows = await cursor.fetchall()
-            for r, row in enumerate(rows, 2):
-                for c, val in enumerate(row, 1):
-                    ws2.cell(row=r, column=c, value=val)
-
-        # ─── Exportar a stream ───
-        stream = io.BytesIO()
-        wb.save(stream)
-        stream.seek(0)
-        
+        from backend.excel_padron import exportar_padron_excel
+        xlsx_bytes = await exportar_padron_excel()
         filename = f"padron_cppo_{datetime.now().strftime('%Y%m%d')}.xlsx"
         return StreamingResponse(
-            stream,
+            io.BytesIO(xlsx_bytes),
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             headers={"Content-Disposition": f"attachment; filename={filename}"}
         )

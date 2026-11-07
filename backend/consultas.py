@@ -31,8 +31,10 @@ class RespuestaCreate(BaseModel):
 @router.get("")
 @router.get("/")
 async def listar_consultas(page: int = 1, limit: int = 50, q: Optional[str] = None):
-    """Lista todas las consultas populares."""
+    """Lista todas las consultas populares con límites seguros."""
     import math
+    page = max(1, page)
+    limit = max(1, min(limit, 200))
     async with await get_db() as db:
         offset = (page - 1) * limit
         params = []
