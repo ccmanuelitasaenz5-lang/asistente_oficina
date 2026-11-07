@@ -43,8 +43,8 @@ AI_QUOTAS = {
     "huggingface": {"limit": 1000, "used": 0},
 }
 
-# Orden de prioridad para la rotación
-AI_PRIORITY = ["nvidia", "zhipu", "gemini", "cohere", "huggingface"]
+# Orden de prioridad para la rotación (Groq es ultrarrápido y tiene cuota alta)
+AI_PRIORITY = ["groq", "nvidia", "zhipu", "gemini", "cohere", "huggingface"]
 
 # ============================================================
 # Telegram
@@ -55,7 +55,7 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 # ============================================================
 # Google Calendar
 # ============================================================
-GOOGLE_CREDENTIALS_FILE = os.getenv("GOOGLE_CREDENTIALS_FILE", "credentials.json")
+GOOGLE_CREDENTIALS_FILE = str(BASE_DIR / os.getenv("GOOGLE_CREDENTIALS_FILE", "credentials.json"))
 GOOGLE_CALENDAR_EMAIL = os.getenv("GOOGLE_CALENDAR_EMAIL", "productivapresidenteobrero@gmail.com")
 
 # Autenticación opcional para API (vacío = desactivada)

@@ -97,16 +97,24 @@ async def lifespan(app: FastAPI):
             logger.error(f"No se pudo iniciar el Bot de Telegram: {e}")
     _marca("Bot de Telegram " + ("procesado" if bot_app else "no configurado (omitido)"))
 
-    # 4. Iniciar scheduler de notificaciones proactivas
+    # 4. Iniciar scheduler de notificaciones proactivas con referencia protegida contra GC
     logger.info("Iniciando scheduler de notificaciones...")
-    asyncio.create_task(iniciar_scheduler())
+    scheduler_task = asyncio.create_task(iniciar_scheduler())
     # Búsqueda semántica: se carga en segundo plano, sin retrasar el arranque
     precalentar_lancedb()
     _marca("Scheduler programado. Servidor listo para recibir peticiones")
 
     yield
+
+    # Detener scheduler
+    if scheduler_task and not scheduler_task.done():
+        scheduler_task.cancel()
+        try:
+            await scheduler_task
+        except asyncio.CancelledError:
+            pass
     
-    # 4. Detener Bot de Telegram al cerrar
+    # 5. Detener Bot de Telegram al cerrar
     if bot_app:
         logger.info("Deteniendo Bot de Telegram...")
         try:
