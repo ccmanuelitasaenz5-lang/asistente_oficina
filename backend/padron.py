@@ -1,7 +1,7 @@
 import logging
 import io
 from datetime import datetime
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Optional, List
@@ -93,12 +93,12 @@ async def eliminar_consejo(consejo_id: int):
 @router.get("/voceros")
 async def listar_voceros(
     consejo_id: Optional[int] = None, 
-    q: Optional[str] = None,
+    q: Optional[str] = Query(None, max_length=100),
     unidad: Optional[str] = None,
-    page: int = 1,
-    limit: int = 50
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=200)
 ):
-    """Lista voceros con paginación."""
+    """Lista voceros con paginación acotada para prevenir sobrecarga."""
     import math
     async with await get_db() as db:
         offset = (page - 1) * limit

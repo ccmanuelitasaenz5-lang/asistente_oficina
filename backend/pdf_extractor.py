@@ -406,6 +406,36 @@ def _agrupar_filas_con_ps(filas_datos: list[tuple]) -> list[str]:
 
     return entradas
 
+OPERADORAS_MOVILES = {"412", "414", "416", "422", "424", "426"}
+
+def _separar_cedula_telefono(digitos: str) -> tuple[str, str]:
+    """
+    Separa cédula y teléfono cuando vienen concatenados en un PDF.
+    Cubre celulares (10 u 11 dígitos) y líneas fijas CANTV (11 dígitos, ej. 0275...).
+    """
+    if not digitos:
+        return "", ""
+        
+    # Caso 1: 10 dígitos finales corresponden a móvil sin 0 (ej. 4141773043)
+    if len(digitos) >= 16 and digitos[-10:-7] in OPERADORAS_MOVILES:
+        return digitos[:-10], digitos[-10:]
+        
+    # Caso 2: 11 dígitos finales corresponden a móvil o fijo con 0 (ej. 04141773043 o 02758815910)
+    if len(digitos) >= 17 and (digitos[-11:-8] in {"041", "042"} or digitos[-11:-7] in {"0275", "0212", "0251", "0274", "0276"}):
+        return digitos[:-11], digitos[-11:]
+
+    # Caso 3: Búsqueda de prefijo con longitud mínima de cédula de 6 dígitos
+    m_op = re.search(r'(0?(?:414|416|424|412|426|422))', digitos)
+    if m_op and m_op.start() >= 6:
+        return digitos[:m_op.start()], digitos[m_op.start():]
+
+    # Caso 4: Fallback por longitud estándar
+    if len(digitos) > 8:
+        return digitos[:8], digitos[8:]
+        
+    return digitos, ""
+
+
 def _parsear_con_ps(linea: str) -> dict | None:
     """Formato: Vocería P/S Nombre [V-Cédula] Teléfono Votos"""
     resto = linea.strip()
@@ -430,15 +460,9 @@ def _parsear_con_ps(linea: str) -> dict | None:
         nombre_resto = resto[:m_concat.start()].strip()
         resto = nombre_resto + " " + resto[m_concat.end():].strip()
         resto = resto.strip()
-        # Buscar prefijo de operadora dentro de los dígitos
-        # Solo hacer match si la cédula tiene al menos 7 dígitos antes del prefijo
-        m_op = re.search(r'(0?(?:414|416|424|412|426|422))', digitos)
-        if m_op and m_op.start() >= 7:
-            cedula = _limpiar_cedula(digitos[:m_op.start()])
-            telefono = digitos[m_op.start():]
-        else:
-            cedula = _limpiar_cedula(digitos[:8]) if len(digitos) > 8 else _limpiar_cedula(digitos)
-            telefono = digitos[8:] if len(digitos) > 8 else ""
+        c_raw, t_raw = _separar_cedula_telefono(digitos)
+        cedula = _limpiar_cedula(c_raw)
+        telefono = t_raw
     else:
         # Cédula suelta
         m_ci = re.search(r'\b(\d{7,8})\b', resto)
@@ -488,14 +512,9 @@ def _parsear_sin_ps(linea: str, nombre_seccion: str) -> dict | None:
         digitos = m_concat.group(1)
         resto = resto[:m_concat.start()].strip() + " " + resto[m_concat.end():].strip()
         resto = resto.strip()
-        # Solo hacer match si la cédula tiene al menos 7 dígitos antes del prefijo
-        m_op = re.search(r'(0?(?:414|416|424|412|426|422))', digitos)
-        if m_op and m_op.start() >= 7:
-            cedula = _limpiar_cedula(digitos[:m_op.start()])
-            telefono = digitos[m_op.start():]
-        else:
-            cedula = _limpiar_cedula(digitos[:8]) if len(digitos) > 8 else _limpiar_cedula(digitos)
-            telefono = digitos[8:] if len(digitos) > 8 else ""
+        c_raw, t_raw = _separar_cedula_telefono(digitos)
+        cedula = _limpiar_cedula(c_raw)
+        telefono = t_raw
     else:
         m_ci = re.search(r'\b(\d{7,8})\b', resto)
         if m_ci:

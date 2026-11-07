@@ -406,9 +406,9 @@ async def upload_activity_photo(file: UploadFile = File(...)):
     if ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(status_code=400, detail=f"Extensión no permitida: {ext}. Usa: {', '.join(ALLOWED_EXTENSIONS)}")
     
-    content = await file.read()
+    content = await file.read(MAX_SIZE + 1)
     if len(content) > MAX_SIZE:
-        raise HTTPException(status_code=400, detail="Archivo demasiado grande (máx 10MB)")
+        raise HTTPException(status_code=413, detail="Archivo demasiado grande (máx 10MB)")
         
     # Verificar que el contenido sea realmente una imagen válida
     def _verificar_imagen(raw_bytes: bytes) -> bool:

@@ -25,11 +25,11 @@ async def upload_acta(file: UploadFile = File(...)):
     if not file.filename or not file.filename.lower().endswith('.pdf'):
         raise HTTPException(status_code=400, detail="Solo se aceptan archivos PDF")
 
-    # Validar tamaño máximo (25 MB)
+    # Validar tamaño máximo (25 MB) leyendo con tope para prevenir DoS
     MAX_PDF_SIZE = 25 * 1024 * 1024
-    content = await file.read()
+    content = await file.read(MAX_PDF_SIZE + 1)
     if len(content) > MAX_PDF_SIZE:
-        raise HTTPException(status_code=400, detail="El archivo excede el tamaño máximo permitido (25 MB)")
+        raise HTTPException(status_code=413, detail="El archivo excede el tamaño máximo permitido (25 MB)")
 
     # Validar magic bytes de PDF (%PDF-)
     if not content.startswith(b"%PDF-"):
