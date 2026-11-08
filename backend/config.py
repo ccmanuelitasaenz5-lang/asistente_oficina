@@ -24,27 +24,23 @@ TEMPLATES_PATH = Path(os.getenv("TEMPLATES_PATH", str(BASE_DIR / "templates")))
 CHROMA_PATH = str(BASE_DIR / "chroma_db")
 
 # ============================================================
-# APIs de Inteligencia Artificial
+# APIs de Inteligencia Artificial (Proveedores Activos y Estables)
 # ============================================================
-GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 COHERE_API_KEY = os.getenv("COHERE_API_KEY", "")
 HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACE_API_KEY", "")
 ZHIPU_API_KEY = os.getenv("ZHIPU_API_KEY", "")
-NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY", "")
 
 # Cuotas diarias (solicitudes por día, nivel gratuito)
 AI_QUOTAS = {
-    "nvidia": {"limit": 2400, "used": 0},  # 40 RPM × 60 min = 2400/hora (aproximado)
-    "zhipu": {"limit": 5000, "used": 0},
-    "groq": {"limit": 14400, "used": 0},
     "gemini": {"limit": 1500, "used": 0},
     "cohere": {"limit": 1000, "used": 0},
     "huggingface": {"limit": 1000, "used": 0},
+    "zhipu": {"limit": 5000, "used": 0},
 }
 
-# Orden de prioridad para la rotación (Gemini es el más estable y rápido actualmente)
-AI_PRIORITY = ["gemini", "groq", "zhipu", "cohere", "huggingface", "nvidia"]
+# Orden de prioridad para la rotación (Gemini es el principal, rápido y sin geobloqueo)
+AI_PRIORITY = ["gemini", "cohere", "huggingface", "zhipu"]
 
 # ============================================================
 # Telegram

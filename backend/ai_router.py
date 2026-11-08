@@ -3,12 +3,10 @@ import logging
 from datetime import date
 from typing import Optional
 from backend.config import (
-    GROQ_API_KEY,
     GEMINI_API_KEY,
     COHERE_API_KEY,
     HUGGINGFACE_API_KEY,
     ZHIPU_API_KEY,
-    NVIDIA_API_KEY,
     AI_PRIORITY,
     AI_QUOTAS
 )
@@ -62,27 +60,6 @@ def _build_standard_messages(prompt: str, system: str, history: list) -> list:
     if prompt:
         msgs.append({"role": "user", "content": prompt})
     return msgs
-
-async def call_groq(prompt: str, system: str, history: list = None) -> Optional[str]:
-    if not GROQ_API_KEY:
-        return None
-    url = "https://api.groq.com/openai/v1/chat/completions"
-    headers = {"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"}
-    
-    data = {
-        "model": "openai/gpt-oss-20b",
-        "messages": _build_standard_messages(prompt, system, history),
-        "temperature": 0.3
-    }
-    
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        response = await client.post(url, headers=headers, json=data)
-        if response.status_code == 200:
-            AI_QUOTAS["groq"]["used"] += 1
-            return response.json()["choices"][0]["message"]["content"]
-        else:
-            logger.error(f"Groq API Error: {response.status_code} - {response.text}")
-            return None
 
 async def call_gemini(prompt: str, system: str, history: list = None) -> Optional[str]:
     if not GEMINI_API_KEY:
@@ -182,68 +159,6 @@ async def call_huggingface(prompt: str, system: str, history: list = None) -> Op
         else:
             logger.error(f"HuggingFace API Error: {response.status_code} - {response.text}")
             return None
-# ─────────────────────────────────────────────────────────────
-# NVIDIA NIM (build.nvidia.com) — Cascada de modelos gratuitos
-# ─────────────────────────────────────────────────────────────
-# Rate limit: 40 RPM por modelo, sin costo.
-# Estrategia: si un modelo falla (429, 410, 500), probar el siguiente.
-NVIDIA_MODELOS = [
-    "nvidia/nemotron-3-super-120b-a12b",     # Principal (el que ya funciona)
-    "deepseek-ai/deepseek-v4-flash-0731",    # Fallback 1
-    "moonshotai/kimi-k3",                    # Fallback 2
-    "qwen/qwen3-next-80b",                   # Fallback 3
-]
-
-async def call_nvidia(prompt: str, system: str, history: list = None) -> Optional[str]:
-    """
-    Cascada de modelos de NVIDIA NIM.
-    Prueba cada modelo en orden. Si uno falla, prueba el siguiente.
-    """
-    if not NVIDIA_API_KEY:
-        return None
-
-    url = "https://integrate.api.nvidia.com/v1/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {NVIDIA_API_KEY}",
-        "Content-Type": "application/json"
-    }
-
-    for modelo in NVIDIA_MODELOS:
-        data = {
-            "model": modelo,
-            "messages": _build_standard_messages(prompt, system, history),
-            "temperature": 0.3,
-            "max_tokens": 8192,
-        }
-
-        try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                response = await client.post(url, headers=headers, json=data)
-
-                if response.status_code == 200:
-                    AI_QUOTAS["nvidia"]["used"] += 1
-                    logger.info(f"NVIDIA NIM OK con modelo: {modelo}")
-                    return response.json()["choices"][0]["message"]["content"]
-
-                elif response.status_code in (429, 410, 500, 503):
-                    logger.warning(
-                        f"NVIDIA {modelo} falló ({response.status_code}), "
-                        f"probando siguiente modelo..."
-                    )
-                    continue
-                else:
-                    logger.error(
-                        f"NVIDIA {modelo} error {response.status_code}: "
-                        f"{response.text[:200]}"
-                    )
-                    continue
-        except Exception as e:
-            logger.error(f"NVIDIA {modelo} excepción: {e}")
-            continue
-
-    logger.error("Todos los modelos de NVIDIA fallaron")
-    return None
-
 async def call_zhipu(prompt: str, system: str, history: list = None) -> Optional[str]:
     if not ZHIPU_API_KEY:
         return None
@@ -266,12 +181,10 @@ async def call_zhipu(prompt: str, system: str, history: list = None) -> Optional
             return None
 
 CALL_FUNCTIONS = {
-    "nvidia": call_nvidia,
-    "zhipu": call_zhipu,
-    "groq": call_groq,
     "gemini": call_gemini,
     "cohere": call_cohere,
-    "huggingface": call_huggingface
+    "huggingface": call_huggingface,
+    "zhipu": call_zhipu
 }
 
 async def generar_texto(prompt: str, system_instruction: str = "", history: list = None) -> str:
