@@ -109,6 +109,7 @@ INTENT_KEYWORDS = {
     "actas": [
         "acta", "asamblea", "elección", "votación", "votos", "elegido",
         "acta de elección", "reunión", "sesión", "resolución", "aprobó",
+        "codigo", "código", "registro", "código de registro", "codigos", "códigos",
     ],
     "cartas": [
         "carta", "oficio", "solicitud", "correspondencia", "comunicado",
@@ -421,27 +422,80 @@ async def _buscar_voceros(query: str) -> list:
                     consejo_nombre_en_query = c_nom
                     break
 
-            # 2. Extraer términos significativos de búsqueda (excluyendo el nombre del consejo y stopwords)
+            # 2. Extraer términos significativos de búsqueda (excluyendo stopwords y palabras de comando)
             stopwords_voceros = {
-                "los", "las", "del", "de", "la", "el", "en", "un", "una",
-                "y", "e", "o", "al", "con", "por", "que", "cuáles", "cuales",
-                "son", "voceros", "vocero", "vocera", "voceras", "consejo",
-                "comunal", "cuántos", "cuantos", "cual", "cuál", "dónde",
-                "donde", "cómo", "como", "quién", "quien", "quiénes", "quienes",
+                "los", "las", "del", "de", "la", "el", "en", "un", "una", "unos", "unas",
+                "y", "e", "o", "u", "al", "con", "por", "para", "que", "cuáles", "cuales",
+                "son", "es", "fue", "fueron", "voceros", "vocero", "vocera", "voceras", "vovero", "voveros",
+                "consejo", "consejos", "comunal", "comunales", "cuántos", "cuantos", "cual", "cuál",
+                "dónde", "donde", "cómo", "como", "quién", "quien", "quiénes", "quienes",
                 "dame", "busca", "buscar", "muestra", "mostrar", "informacion",
-                "datos", "contacto", "telefono", "cedula", "todos", "todas"
+                "datos", "contacto", "telefono", "telefonos", "celular", "celulares",
+                "cedula", "cedulas", "todos", "todas", "todo", "toda", "solo", "solamente",
+                "cada", "uno", "unos", "lista", "has", "haz", "hacer", "dime", "indica", "indicando",
+                "nombre", "nombres", "apellido", "apellidos", "cargo", "cargos", "tipo",
+                "principal", "principales", "suplente", "suplentes", "comision", "comité", "comite"
             }
             
+            # Mapeo exhaustivo de comités/áreas a sus filtros SQL exactos
+            MAPEO_COMITES = [
+                (["legislaci", "legislat"], "LOWER(v.cargo) LIKE '%legislaci%'"),
+                (["electoral"], "LOWER(v.cargo) LIKE '%electoral%'"),
+                (["contralor", "control social"], "LOWER(v.cargo) LIKE '%contralor%'"),
+                (["financ", "administra", "tesorer"], "(LOWER(v.cargo) LIKE '%financier%' OR LOWER(v.cargo) LIKE '%administrat%')"),
+                (["salud", "medico", "medica"], "LOWER(v.cargo) LIKE '%salud%'"),
+                (["ecosocialis", "ambiente", "ecolog"], "LOWER(v.cargo) LIKE '%ecosocialismo%'"),
+                (["alimentac", "nutricion", "consumidor"], "LOWER(v.cargo) LIKE '%alimentaci%'"),
+                (["educaci", "formacion"], "LOWER(v.cargo) LIKE '%educaci%'"),
+                (["econom", "productiv"], "LOWER(v.cargo) LIKE '%econom%'"),
+                (["paz", "justicia"], "LOWER(v.cargo) LIKE '%paz%'"),
+                (["juventud", "joven"], "LOWER(v.cargo) LIKE '%juventud%'"),
+                (["mujer", "igualdad", "genero"], "LOWER(v.cargo) LIKE '%mujer%'"),
+                (["adulto", "abuelo"], "LOWER(v.cargo) LIKE '%adult%'"),
+                (["discapacidad", "conapdis"], "LOWER(v.cargo) LIKE '%discapacidad%'"),
+                (["vivienda", "habitat"], "LOWER(v.cargo) LIKE '%vivienda%'"),
+                (["tierra"], "LOWER(v.cargo) LIKE '%tierra%'"),
+                (["agua", "hidro"], "LOWER(v.cargo) LIKE '%agua%'"),
+                (["gas", "energia", "electri"], "(LOWER(v.cargo) LIKE '%gas%' OR LOWER(v.cargo) LIKE '%energ%')"),
+                (["seguridad", "defensa"], "LOWER(v.cargo) LIKE '%seguridad%'"),
+                (["cultura"], "LOWER(v.cargo) LIKE '%cultura%'"),
+                (["deporte", "recreac"], "(LOWER(v.cargo) LIKE '%deporte%' OR LOWER(v.cargo) LIKE '%recreac%')"),
+                (["comunicac", "medio"], "(LOWER(v.cargo) LIKE '%comunicaci%' OR LOWER(v.cargo) LIKE '%medios%')"),
+                (["niño", "adolescent"], "LOWER(v.cargo) LIKE '%niñ%'"),
+                (["familia"], "LOWER(v.cargo) LIKE '%familia%'"),
+                (["transporte", "vialidad"], "LOWER(v.cargo) LIKE '%transporte%'"),
+                (["riesgo"], "LOWER(v.cargo) LIKE '%riesgo%'"),
+                (["tecnolog"], "LOWER(v.cargo) LIKE '%tecnolog%'"),
+                (["derechos humanos", "ddhh"], "LOWER(v.cargo) LIKE '%derechos humanos%'"),
+                (["planificac"], "LOWER(v.cargo) LIKE '%planificaci%'")
+            ]
+
             q_limpia = q_norm
             if consejo_nombre_en_query:
                 q_limpia = q_limpia.replace(_normalizar(consejo_nombre_en_query), " ")
                 if _normalizar(consejo_nombre_en_query) == "sur america":
                     q_limpia = q_limpia.replace("suramerica", " ")
-                    
-            terminos_busqueda = [
-                w for w in re.findall(r'[a-zA-Z0-9áéíóúñÁÉÍÓÚÑ]+', q_limpia)
-                if len(w) > 2 and _normalizar(w) not in stopwords_voceros
-            ]
+
+            # Detectar si la query pide un comité o área temática específica
+            filtro_comite_sql = None
+            raices_comite_activadas = []
+            for palabras_clave, sql_fragment in MAPEO_COMITES:
+                for pc in palabras_clave:
+                    if pc in q_norm:
+                        filtro_comite_sql = sql_fragment
+                        raices_comite_activadas.extend(palabras_clave)
+                        break
+                if filtro_comite_sql:
+                    break
+
+            # Extraer términos restantes (posibles nombres de persona)
+            terminos_busqueda = []
+            for w in re.findall(r'[a-zA-Z0-9áéíóúñÁÉÍÓÚÑ]+', q_limpia):
+                w_norm = _normalizar(w)
+                if len(w) > 2 and w_norm not in stopwords_voceros:
+                    # No incluir palabras que activaron el filtro de comité
+                    if not any(rc in w_norm for rc in raices_comite_activadas):
+                        terminos_busqueda.append(w)
 
             # 3. Construir consulta SQL según el contexto
             where_clauses = ["v.activo = 1"]
@@ -451,8 +505,17 @@ async def _buscar_voceros(query: str) -> list:
                 where_clauses.append("v.consejo_id = ?")
                 params.append(consejo_id_en_query)
 
-            # Filtro por unidad (si aplica)
-            if unidad_pedida:
+            # Filtro inteligente por Tipo: Principal o Suplente
+            if any(w in q_norm for w in ["principal", "principales"]):
+                where_clauses.append("v.tipo = 'Principal'")
+            elif any(w in q_norm for w in ["suplente", "suplentes"]):
+                where_clauses.append("v.tipo = 'Suplente'")
+
+            # Aplicar filtro de comité si fue detectado
+            if filtro_comite_sql:
+                where_clauses.append(filtro_comite_sql)
+            elif unidad_pedida:
+                # Filtro por unidad macro (si no hubo comité específico)
                 if unidad_pedida == "Ejecutiva":
                     where_clauses.append("""(
                         LOWER(v.cargo) NOT LIKE '%contralor%'
@@ -468,7 +531,7 @@ async def _buscar_voceros(query: str) -> list:
                 elif unidad_pedida == "Legislativa":
                     where_clauses.append("(LOWER(v.cargo) LIKE '%legislaci%' OR LOWER(v.cargo) LIKE '%electoral%')")
 
-            # Filtro por términos específicos (nombre, cargo, cédula)
+            # Filtro por términos específicos restantes (nombres de persona, cédula)
             for t in terminos_busqueda:
                 t_sin_tilde = _normalizar(t)
                 where_clauses.append("""(
@@ -482,13 +545,13 @@ async def _buscar_voceros(query: str) -> list:
 
             where_sql = " AND ".join(where_clauses)
             
-            # Ordenar priorizando coincidencia de cargo y principales
-            order_sql = "CASE WHEN v.tipo = 'Principal' THEN 0 ELSE 1 END, v.nombre"
+            # Ordenar por consejo y nombre de forma ordenada
+            order_sql = "c.nombre ASC, CASE WHEN v.tipo = 'Principal' THEN 0 ELSE 1 END, v.nombre ASC"
             if terminos_busqueda:
                 primer_termino = f"%{terminos_busqueda[0]}%"
                 order_sql = f"""CASE 
-                    WHEN LOWER(v.cargo) LIKE '{primer_termino}' THEN 0
-                    WHEN LOWER(v.nombre) LIKE '{primer_termino}' THEN 1
+                    WHEN LOWER(v.nombre) LIKE '{primer_termino}' THEN 0
+                    WHEN LOWER(v.cargo) LIKE '{primer_termino}' THEN 1
                     ELSE 2 
                 END, {order_sql}"""
 
@@ -500,7 +563,7 @@ async def _buscar_voceros(query: str) -> list:
             LEFT JOIN actas a ON v.acta_id = a.id
             WHERE {where_sql}
             ORDER BY {order_sql}
-            LIMIT 50
+            LIMIT 100
             """
             
             cursor = await db.execute(sql, tuple(params))
@@ -577,12 +640,46 @@ async def _buscar_voceros(query: str) -> list:
 
 async def _buscar_actas(query: str) -> list:
     resultados = []
-    q = f"%{query.lower()}%"
+    q_norm = _normalizar(query)
     try:
         from backend.database import get_db
         async with await get_db() as db:
-            cursor = await db.execute(
+            # Si pregunta por codigos de registro o por todos los consejos
+            es_consulta_general = any(p in q_norm for p in ["codigo", "registro", "cada", "todos", "consejos", "acta"])
+            
+            # Buscar si se mencionó un consejo específico
+            consejos_conocidos = [
+                "la inmaculada", "barrio bolivar ii", "pablo rosales", "la esperanza",
+                "la victoria", "manuelita saenz", "divino niño", "sur america", "las flores parte alta"
+            ]
+            consejo_filtrar = None
+            for c in consejos_conocidos:
+                if c in q_norm or (c == "sur america" and "suramerica" in q_norm):
+                    consejo_filtrar = c
+                    break
+
+            if consejo_filtrar:
+                sql = """
+                SELECT a.codigo_registro, a.fecha_acta, a.nombre_consejo,
+                       a.sector, a.pdf_path, c.nombre as consejo_nombre
+                FROM actas a
+                LEFT JOIN consejos_comunales c ON a.consejo_id = c.id
+                WHERE LOWER(a.nombre_consejo) LIKE ? OR LOWER(c.nombre) LIKE ?
+                ORDER BY a.fecha_acta DESC
                 """
+                params = [f"%{consejo_filtrar}%", f"%{consejo_filtrar}%"]
+            elif es_consulta_general:
+                sql = """
+                SELECT a.codigo_registro, a.fecha_acta, a.nombre_consejo,
+                       a.sector, a.pdf_path, c.nombre as consejo_nombre
+                FROM actas a
+                LEFT JOIN consejos_comunales c ON a.consejo_id = c.id
+                ORDER BY a.nombre_consejo ASC
+                """
+                params = []
+            else:
+                q = f"%{query.lower()}%"
+                sql = """
                 SELECT a.codigo_registro, a.fecha_acta, a.nombre_consejo,
                        a.sector, a.pdf_path, c.nombre as consejo_nombre
                 FROM actas a
@@ -590,22 +687,26 @@ async def _buscar_actas(query: str) -> list:
                 WHERE LOWER(a.nombre_consejo) LIKE ?
                    OR LOWER(a.sector) LIKE ?
                    OR LOWER(c.nombre) LIKE ?
+                   OR LOWER(a.codigo_registro) LIKE ?
                 ORDER BY a.fecha_acta DESC
                 LIMIT 20
-                """,
-                (q, q, q),
-            )
+                """
+                params = [q, q, q, q]
+
+            cursor = await db.execute(sql, tuple(params))
             rows = await cursor.fetchall()
             for r in rows:
+                c_nom = r[2] or r[5] or "Sin Consejo"
+                c_cod = r[0] or "No registrado"
                 resultados.append({
                     "fuente": "actas",
                     "tipo_doc": "Acta de Elección",
-                    "codigo": (r[0] or ""),
+                    "codigo": c_cod,
                     "fecha": (r[1] or ""),
-                    "consejo": (r[2] or r[5] or ""),
+                    "consejo": c_nom,
                     "sector": (r[3] or ""),
                     "pdf_path": (r[4] or ""),
-                    "resumen": f"Acta del {r[1]} — {r[2] or r[5]} (sector: {r[3] or 'N/A'})",
+                    "resumen": f"Consejo Comunal: {c_nom} | Código de Registro: {c_cod} | Fecha Acta: {r[1]} (Sector: {r[3] or 'N/A'})",
                 })
     except Exception as e:
         logger.error(f"Error buscando actas: {e}")
@@ -1169,11 +1270,22 @@ async def _generar_respuesta_ia(
             nombre = r.get("nombre", "Sin nombre")
             cedula = _enmascarar_cedula(r.get("cedula", ""), query)
             cargo = r.get("cargo", "Sin cargo")
+            tipo = r.get("tipo", "Principal")
+            telefono = r.get("telefono") or "No disponible"
             consejo = r.get("consejo", "Sin consejo")
 
             contexto_parts.append(
                 f"[{i}] 👤 {fuente_label}: {_truncar(nombre, 50)} - "
-                f"C.I. {cedula} - {_truncar(cargo, 50)} ({_truncar(consejo, 50)})"
+                f"C.I. {cedula} - {_truncar(cargo, 50)} | Tipo: {tipo} | Tel: {telefono} ({_truncar(consejo, 50)})"
+            )
+
+        elif fuente == "actas":
+            codigo = r.get("codigo", "Sin código")
+            consejo = r.get("consejo", "Sin consejo")
+            fecha = r.get("fecha", "")
+            sector = r.get("sector", "")
+            contexto_parts.append(
+                f"[{i}] 📋 {fuente_label}: Consejo: {consejo} | Código de Registro: {codigo} | Fecha Acta: {fecha} | Sector: {sector}"
             )
 
         elif fuente == "documentos":

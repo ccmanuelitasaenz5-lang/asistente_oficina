@@ -43,8 +43,8 @@ AI_QUOTAS = {
     "huggingface": {"limit": 1000, "used": 0},
 }
 
-# Orden de prioridad para la rotación (Groq es ultrarrápido y tiene cuota alta)
-AI_PRIORITY = ["groq", "nvidia", "zhipu", "gemini", "cohere", "huggingface"]
+# Orden de prioridad para la rotación (Gemini es el más estable y rápido actualmente)
+AI_PRIORITY = ["gemini", "groq", "zhipu", "cohere", "huggingface", "nvidia"]
 
 # ============================================================
 # Telegram
